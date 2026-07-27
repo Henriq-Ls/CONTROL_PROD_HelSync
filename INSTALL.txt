@@ -1,0 +1,144 @@
+# ------------------------- OBRIGATÓRIO --------------------------------
+python.exe -m pip install --upgrade pip     # Atualiza o pip (gerenciador de pacotes do Python)
+python -m pip install --upgrade setuptools wheel    # Atualiza ferramentas essenciais de build (compilação de pacotes)
+
+# ------------------------- INSTALADO --------------------------------
+pip install streamlit   # Interface desktop baseada em Streamlit
+pip install openai  # IA ChatGPT, e openRouter
+pip install streamlit-mic-recorder
+pip install pymatting
+pip install pooch
+pip install plotly
+pip install pywin32
+
+PARA USAR CUDA, INSTALE O TORCH CUDA:
+pip uninstall onnxruntime onnxruntime-gpu rembg numpy -y
+pip install numpy==1.26.4
+pip install onnxruntime-gpu==1.16.3
+pip install rembg==2.0.59 --no-deps
+
+# IA ChatGPT / OpenRouter
+pip install openai==1.82.0
+
+# Transformers Hugging Face
+pip install transformers==4.51.3
+
+# ---------- OPENCV ----------
+pip uninstall opencv-python opencv-python-headless -y
+pip install opencv-python-headless==4.10.0.84
+
+# ---------- TORCH CUDA ---------- 2.7 GIGA
+pip uninstall torch torchvision torchaudio -y
+pip install torch==2.2.2+cu118 torchvision==0.17.2+cu118 torchaudio==2.2.2+cu118 --index-url https://download.pytorch.org/whl/cu118
+
+pip install
+pip install
+
+
+
+# -----------------------
+-- ALGUNS MODULOS --------------------------------
+pip install openai  # IA ChatGPT, e openRouter
+pip install pywin32  # IMPRESSORA   # Integração com Windows (ex: impressora)
+
+# Geração de PDFs   pip install reportlab  # CRIAR PDF
+
+# Versão CPU do rembg   # Remoção de fundo em imagens
+pip install "rembg[cpu]"  # CPU
+
+pip install plotly      # GRÁFICOS
+
+pip install qrcode[pil]  # QR Code
+
+
+# ------------------------- DESINSTALADO --------------------------------
+
+
+
+
+
+# ------------------------- CONTROLE DE AMBIENTE --------------------------------
+# Atualiza um pacote específico
+pip install --upgrade nome_modulo
+
+# Mostra informações de um pacote instalado
+pip show  rembg[gpu]
+
+# Executa um script Python
+python nome_do_arquivo.py
+
+# Lista todos os pacotes instalados
+pip list
+
+# Mostra versão do Python
+python --version
+
+# Mostra versão do pip
+pip --version
+
+# Atualiza pip novamente (forma alternativa)
+python.exe -m pip install --upgrade pip
+
+# Atualiza setuptools e wheel novamente
+python -m pip install --upgrade setuptools wheel
+# LIMPAR .venv:
+C:\Users\henri\AppData\Local\Programs\Python\Python311\python.exe -m venv .venv --clear
+
+# ------------------------- REQUERIMENTOS --------------------------------
+# Instala dependências de um arquivo requirements.txt
+pip install -r requirements.txt
+
+# Gera lista atual de dependências do ambiente
+pip freeze > requirements.txt
+
+
+# ------------------------- CRIAR ARQUIVOS VIA COMANDO --------------------------------
+# Cria arquivo Python
+ni nome_arq.py -ItemType File
+
+# Cria pasta
+ni pasta -ItemType Directory
+
+# Cria arquivo dentro de pasta (força criação)
+ni .\pasta\nome_arq.py -Force
+
+
+# ------------------------- LISTAR PROJETOS --------------------------------
+# Lista arquivos do projeto ignorando pastas técnicas
+Get-ChildItem -Recurse -File |
+Where-Object {
+    $_.FullName -notmatch "\\.venv\\" -and
+    $_.FullName -notmatch "\\.git\\" -and
+    $_.FullName -notmatch "\\__pycache__\\" -and
+    $_.FullName -notmatch "\\.idea\\"
+} |
+Sort-Object FullName |
+ForEach-Object {
+    $_.FullName.Replace("$PWD\", "")
+} |
+ForEach-Object {
+    $_ -replace "\\", " └─ "
+}
+
+
+# ------------------------- CRIADOR DE EXE (STREAMLIT) --------------------------------
+# Build do app Streamlit em executável
+streamlit-desktop-app build APP_.py `
+    --name Stream_IDE `
+    --streamlit-options --theme.base=dark `
+    --pyinstaller-options `
+    --onedir --noconfirm `
+    --icon icon.ico
+
+# OBS: usar collect-data certifi para HTTPS funcionar corretamente
+# (requests depende do certifi para validação SSL)
+
+# OPCIONAL:
+# --onefile  # gera executável único
+
+
+# ------------------------- RODAR APP --------------------------------
+streamlit run APP_.py
+
+python -m streamlit run APP_.py
+python .\_GERENTE_PROJETO_\b__FORMATAR_CODIGO.py

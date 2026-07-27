@@ -1,0 +1,18 @@
+{
+  "packaging": {
+    "versao": "26.2",
+    "instalado_em": "2026-07-27T12:24:19"
+  },
+  "setuptools": {
+    "versao": "83.0.0",
+    "instalado_em": "2026-07-27T12:24:19"
+  },
+  "wheel": {
+    "versao": "0.47.0",
+    "instalado_em": "2026-07-27T12:24:19"
+  },
+  "pip": {
+    "versao": "26.1.2",
+    "instalado_em": "2026-07-27T12:23:55"
+  }
+}

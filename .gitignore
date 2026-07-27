@@ -1,0 +1,62 @@
+# ====================== ARQUIVOS DE SENHAS ======================
+_GERENTE_PROJETO_/.senhas
+_GERENTE_PROJETO_/.env
+_GERENTE_PROJETO_/as_3vers_Remove_FUndo
+
+*.env
+!*.env.example
+
+# ====================== ARQUIVOS TEMPORÁRIOS / RASCUNHOS ======================
+text.txt
+Rascunho.py
+Rasc.py
+Rasc2.py
+relatorio_codigo.txt
+Arvore_Projeto.py
+
+# ====================== BANCO DE DADOS ======================
+*.sqlite
+*.db
+*.sqbpro
+identifier.sqlite
+Base_Dados.sqbpro
+
+# ====================== OUTROS ======================
+ffmpeg
+
+# ====================== PASTAS E ARQUIVOS GERAIS ======================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Ambientes virtuais
+.venv/
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/

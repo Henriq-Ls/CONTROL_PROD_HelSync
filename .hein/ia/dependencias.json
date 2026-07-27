@@ -1,0 +1,36 @@
+{
+  "esbolço.py": {
+    "linguagem": "python",
+    "linhas": 41,
+    "classes": [],
+    "funcoes": [],
+    "imports_locais": [],
+    "imports_externos": [],
+    "erro_sintaxe": "SyntaxError L1: invalid syntax"
+  },
+  "INSTALL.txt": {
+    "linguagem": "txt",
+    "linhas": 33,
+    "classes": [],
+    "funcoes": [],
+    "imports_locais": [],
+    "imports_externos": [],
+    "erro_sintaxe": null
+  },
+  "main.py": {
+    "linguagem": "python",
+    "linhas": 8,
+    "classes": [],
+    "funcoes": [
+      {
+        "nome": "main",
+        "params": [],
+        "async": false,
+        "docstring": null
+      }
+    ],
+    "imports_locais": [],
+    "imports_externos": [],
+    "erro_sintaxe": null
+  }
+}
