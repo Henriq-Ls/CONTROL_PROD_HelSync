@@ -1,0 +1,48 @@
+HEN-PLACE-CONTROL
+DOCUMENTAÇÃO DA ABA CRIAÇÃO
+Última atualização: 2026-10-11
+
+PAPEL DA ABA
+------------
+
+A aba Criação inicia o processamento do último produto salvo no Cadastro. Ela
+apresenta o resumo e as mídias do produto, configurações de processamento, as
+ações Atualizar e Iniciar criação, o progresso e o terminal de mensagens.
+
+INTEGRAÇÃO ATIVA
+----------------
+
+    main.py
+        -> _APP_.main_window.MainWindow
+        -> _APP_.App_Janela_PySide6.MainWindow
+        -> _APP_.criacao.App_Criacao_PySide6.CreationTab
+        -> _APP_.criacao.Controller_Criacao_PySide6.CreationController
+        -> _APP_.producao.pipeline.executar_producao()
+
+A classe pública ativa da aba e seu controlador ficam neste pacote. O
+controlador preserva o fluxo integrado ao Cadastro, SQLite, AppData, tarefas em
+segundo plano e painel de IA. A página visual de Resultados é criada pelo pacote
+_APP_/resultados e é exibida em uma aba superior separada.
+
+O diretório _APP_/producao contém a pipeline de processamento e um shim para
+imports históricos; não representa uma aba de navegação.
+
+COMPORTAMENTO
+-------------
+
+- Atualizar relê o cadastro, as mídias, os recursos e as saídas existentes.
+- Iniciar criação valida os dados e executa a pipeline em tarefa de fundo.
+- Progresso, mensagens e erros permanecem visíveis no terminal da aba.
+- Após uma criação bem-sucedida, a janela seleciona Resultados.
+- A seleção de recursos em Configurações atualiza os controles da Criação.
+- O painel de IA recebe o contexto do produto enquanto Criação ou Resultados
+  estiver ativa.
+
+RESTRIÇÕES
+----------
+
+- A ordem de imagens vem de .ordem_midias.json.
+- produtos.txt é usado para conferência, não para reconstruir grupos ou vínculos.
+- A execução completa deve ser validada no computador desktop de destino.
+- O nome ProductionTab é preservado como alias de compatibilidade; a janela
+  ativa usa CreationTab/CreationController.

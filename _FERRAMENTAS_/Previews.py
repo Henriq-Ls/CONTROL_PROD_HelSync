@@ -11,11 +11,18 @@ GERAR_SOMBRA    = True
 COMBINAR_CORES  = False  # Desativado — lavava a madeira
 ANCORAR_BASE    = True
 SUAVIZAR_BORDAS = True
+_SESSAO_PREVIEW = None
 
 def remover_fundo_(imagem_path: Path) -> Image.Image:
+    global _SESSAO_PREVIEW
     with open(imagem_path, "rb") as f:
         dados = f.read()
-    resultado = remove(dados)
+    if _SESSAO_PREVIEW is None:
+        _SESSAO_PREVIEW = new_session(
+            "u2net",
+            providers=["CPUExecutionProvider"],
+        )
+    resultado = remove(dados, session=_SESSAO_PREVIEW)
 
     return Image.open(BytesIO(resultado)).convert("RGBA")
 

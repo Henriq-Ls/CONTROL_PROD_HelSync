@@ -1,0 +1,1 @@
+"""Ferramentas e utilitários compartilhados do projeto."""

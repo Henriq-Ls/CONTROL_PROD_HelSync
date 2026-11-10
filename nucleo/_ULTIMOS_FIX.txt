@@ -1,0 +1,99 @@
+════════════════════════════════════════════════════════════════════════════════
+  ÚLTIMAS CORREÇÕES E ALTERAÇÕES
+════════════════════════════════════════════════════════════════════════════════
+
+Formato:
+  [DATA] [ID] Descrição da correção
+  Arquivos alterados:
+  Causa raiz:
+  Solução aplicada:
+
+────────────────────────────────────────────────────────────────────────────────
+
+[2026-11-08] [MIDIAS-AVULSAS] Adicionada uma aba para processar imagens e vídeos
+sem executar a Criação completa.
+Arquivos alterados:
+  _APP_/midias_avulsas/App_Midias_Avulsas_PySide6.py
+  _APP_/midias_avulsas/processor.py
+  _APP_/midias_avulsas/_DOC_MIDIAS_AVULSAS.txt
+  Tratar_midias/v__Converter_video.py
+  _APP_/main_window.py
+  _APP_/_DOC_APP.txt
+  _APP_/_STATUS_APP.txt
+  nucleo/_DOC_PROJETO.txt
+  nucleo/_DOC_RESUMO.txt
+Causa:
+  O fluxo de Criação sempre parte do cadastro mais recente e não oferece um
+  modo separado para tratar mídias sem executar a produção completa.
+Solução:
+  A nova aba reutiliza os módulos atuais de imagem e vídeo em segundo plano.
+  Usa a pasta raiz do produto escolhido ou a pasta indicada pelo usuário; cria
+  ou reutiliza b_sem_fundo, c_fundo_branco, d_medidas e F_video_shopee dentro
+  desse destino. Preserva originais e saídas existentes, sem alterar A_ENTRADA,
+  produtos.txt ou .ordem_midias.json.
+  O conversor também aceita vídeos sem áudio original, com ou sem música.
+Validação:
+  Sintaxe, validações de medidas, cópia sem sobrescrita e leitura de metadados
+  foram conferidas localmente. A validação real no computador Windows de destino
+  permanece pendente; o aplicativo e o processamento pesado não foram iniciados.
+
+────────────────────────────────────────────────────────────────────────────────
+
+[2026-09-14] [CADASTRO-RENOMEACAO] Finalizado o salvamento das imagens organizadas
+por grupos, variações e medidas.
+Arquivos alterados:
+  _APP_/PySide6_core.py
+  _APP_/cadastro/_DOC_ENTRADA_CADASTRO.txt
+  _APP_/_DOC_APP.txt
+  _APP_/_STATUS_APP.txt
+  nucleo/_DOC_PROJETO.txt
+  nucleo/_DOC_RESUMO.txt
+  nucleo/_ULTIMOS_FIX.txt
+  _DOC_PIPELINE_ATE_CADASTRO.txt (removido; substituído pelos documentos atuais)
+Causa raiz:
+  A tela enviava nomes_destino para salvar_cadastro_task(), mas a definição
+  efetivamente carregada do núcleo não recebia esse argumento nem o aplicava
+  na cópia das imagens.
+Solução aplicada:
+  O núcleo aceita os nomes finais preparados pelo Cadastro, copia cada
+  ocorrência para o nome correspondente, permite a mesma origem em grupos
+  diferentes, grava a ordem final no .ordem_midias.json e mantém os vídeos
+  com seus nomes originais.
+Validação:
+  Produto único com duas variações salvo no computador de destino, gerando
+  arquivos ACO1_* e ACO2_* com medidas e peso.
+
+Próxima etapa:
+  Consumir essa pasta, produtos.txt, .ordem_midias.json e a configuração de
+  A_ENTRADA no módulo Produção.
+
+────────────────────────────────────────────────────────────────────────────────
+
+[2026-10-12] [PROMPTS-MODULARIZACAO] Aba Prompts organizada em pacote próprio.
+Arquivos alterados:
+  _APP_/prompts/__init__.py (criado)
+  _APP_/prompts/App_Prompts_PySide6.py (criado)
+  _APP_/prompts/_DOC_prompts.txt (criado)
+  _APP_/App_Janela_PySide6.py
+  _APP_/__init__.py
+  _APP_/_DOC_APP.txt
+  _APP_/anuncio/Controller_Anuncio_PySide6.py
+  _FERRAMENTAS_/ia_prompt_catalogo.py
+  _IAS_/_DOC_IAS.txt
+  nucleo/_DOC_PROJETO.txt
+  nucleo/_DOC_RESUMO.txt
+Causa:
+  A implementação ativa da aba Prompts estava dentro do módulo monolítico
+  App_Janela_PySide6.py, sem uma pasta ou documentação próprias do módulo.
+Solução:
+  A implementação ativa foi transferida para _APP_/prompts. O texto-base do
+  prompt externo de pesquisa de Anúncio usa sistema.json em AppData; os dados
+  do produto continuam sendo acrescentados pelo Controller de Anúncio.
+  Documentos de arquitetura e IA foram atualizados para indicar os fluxos e
+  separar o prompt externo do contexto interno da aba Vendas.
+Validação:
+  Busca e conferência estáticas; git diff --check passou. O app e testes não
+  foram executados nesta IDE; validação visual e de runtime fica pendente no
+  desktop Windows de destino.
+
+════════════════════════════════════════════════════════════════════════════════

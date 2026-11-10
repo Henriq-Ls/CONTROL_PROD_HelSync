@@ -1,0 +1,132 @@
+ABA PROMPTS — ORGANIZAÇÃO E FLUXOS ATIVOS
+=========================================
+
+OBJETIVO E LOCALIZAÇÃO
+----------------------
+- Esta pasta contém a implementação PySide6 da aba Prompts.
+- App_Prompts_PySide6.py mantém a interface da aba, seus cartões e o snapshot
+  que a aba fornece ao painel interno de IA.
+- __init__.py exporta CatalogPromptsTab e PromptsTab para integração com a
+  janela principal.
+- Esta aba organiza quatro tipos diferentes de conteúdo. Eles não devem ser
+  tratados como se tivessem o mesmo uso ou armazenamento.
+
+INTEGRAÇÃO COM A JANELA PRINCIPAL
+---------------------------------
+- _APP_/App_Janela_PySide6.py importa CatalogPromptsTab desta pasta.
+- O arquivo antigo ainda contém definições históricas de PromptsTab e cartões.
+  Elas são mantidas por compatibilidade; não são a implementação ativa.
+- _APP_/main_window.py seleciona CatalogPromptsTab antes de construir a janela
+  principal. O painel de IA recebe ai_context_snapshot() quando a aba Prompts
+  fica ativa.
+
+COLUNA ESQUERDA — "USADOS PELO SISTEMA"
+---------------------------------------
+1. Prompts de escopo do catálogo
+   - Interface: cartões editáveis, com finalidade e escopo.
+   - Persistência: _FERRAMENTAS_/ia_prompt_catalogo.py.
+   - Arquivo local: AppData/IAs/prompts/catalogo.json.
+   - Padrões versionados: _FERRAMENTAS_/prompts_ia/catalogo.json.
+   - São os prompts por escopo que o painel interno de IA pode usar.
+
+2. Anúncio - pesquisa para ChatGPT
+   - É um texto-base editável para um prompt externo, copiado pelo botão de
+     pesquisa da aba Anúncio. Não é enviado pelo painel interno de IA.
+   - Chave persistida: anuncio_pesquisa_externa.
+   - Arquivo local: AppData/IAs/prompts/sistema.json, separado do catálogo e
+     das referências.
+   - Na primeira abertura da aba, se sistema.json não existir, ele é criado com
+     o texto padrão de _FERRAMENTAS_/Prompts.py, função Descrition_entrad.
+   - Se o arquivo existir e contiver um objeto JSON, o carregador o usa sem
+     mesclar padrões nem sobrescrever as chaves existentes. O salvamento de uma
+     chave preserva outras chaves válidas, permitindo ampliar o arquivo depois.
+   - Se a leitura falhar ou o JSON não puder ser interpretado como objeto, a
+     tela e o gerador usam o padrão em memória. Falhas de gravação são exibidas
+     na aba sem encerrá-la.
+   - "Salvar" grava o texto editado. "Restaurar padrão" repõe e grava o texto
+     atual definido no código.
+   - A nota do cartão informa quais dados são acrescentados automaticamente
+     pelo gerador; esses dados não são editados neste cartão.
+
+3. Prompts de geração de imagem
+   - Três modelos independentes: capa, produto em uso e detalhes.
+   - São editáveis na seção “Prompts de imagem · usados em Resultados”.
+   - Padrões versionados: _FERRAMENTAS_/prompts_ia/geracao_imagem.json.
+   - Cópia editável: AppData/IAs/prompts/geracao_imagem.json.
+   - São lidos pelo preparo de prompt da aba Resultados; não são enviados ao
+     painel de conversa nem executam geração automática de imagem.
+    - Os padrões usam produto, descrição e acabamento do cadastro; somente
+      “Produto em uso” também usa Serventia para definir a cena.
+    - Somente “Produto em uso” usa altura, largura e espessura extraídas do nome
+      final da imagem, para manter a escala da cena; não as escreve na imagem.
+    - Peso, código interno do produto e nome do arquivo não entram nos modelos
+       padrão. Todos os três prompts recebem automaticamente largura, altura e
+       proporção exatas da imagem anexada, e solicitam a maior resolução e
+       qualidade disponíveis nesse formato.
+     - Todos permitem melhorar a imagem e reparar danos; se algo estiver
+       danificado, faltando ou cortado, orientam a reconstrução plausível com
+       base na referência e nos dados confirmados, sem inventar características.
+       Essas instruções se sobrepõem a conflitos em modelos personalizados.
+     - A proporção vem da imagem anexada ao prompt, não da tabela A_ENTRADA:
+       o Cadastro aplica a proporção selecionada ao PNG preparado, mas não
+       grava essa seleção na tabela.
+    - Configuração de venda, código do grupo e logo não são dados do prompt de
+      imagem. Logo e fundo são aplicados na etapa F, fora do diálogo do prompt.
+
+COLUNA DIREITA — "PARA COPIAR"
+-----------------------------
+- Contém quatro referências históricas definidas em _FERRAMENTAS_/Prompts.py.
+- O usuário pode editar o texto, salvá-lo e copiá-lo.
+- Persistência: AppData/IAs/prompts/referencias.json.
+- São referências reutilizáveis; não são executadas automaticamente pelas abas
+  Cadastro, Criação, Anúncio ou Vendas. O orientador de IA da aba Prompts pode
+  receber o snapshot delas como contexto.
+
+GERAÇÃO DO PROMPT EXTERNO DE ANÚNCIO
+------------------------------------
+- O ponto de uso é
+  _APP_/anuncio/Controller_Anuncio_PySide6.py, método
+  _copy_marketplace_research_prompt.
+- O método lê anuncio_pesquisa_externa de sistema.json e usa o padrão do código
+  quando a chave não está disponível ou a leitura do arquivo falha.
+- Depois do texto-base, o método acrescenta os dados do produto já montados
+  pelo Cadastro, acabamento, regras selecionadas, medidas/peso, formas de
+  venda, instruções de segurança e pesquisa, e o formato obrigatório que
+  separa a análise comercial do único bloco copiável de título e descrição.
+- O prompt completo é colocado na área de transferência para o usuário colar
+  em ChatGPT ou outra ferramenta externa. O aplicativo não consulta a internet,
+  não envia esse prompt a um serviço externo e não confirma preços.
+- O bloco "DADOS DO CADASTRO", as regras selecionadas e o contrato de saída
+  pertencem ao Controller de Anúncio; não devem ser movidos para o texto
+  editável da aba.
+
+PAINEL INTERNO E LIMITE IMPORTANTE
+----------------------------------
+- O painel interno recebe o snapshot próprio da aba Prompts e os prompts
+  editáveis por escopo do catálogo. A seleção do escopo e a troca de contexto
+  ficam em _APP_/main_window.py e _IAS_/Painel_IA_PySide6.py.
+- O prompt externo de pesquisa de marketplace não é o prompt interno da aba
+  Vendas. No fluxo atualmente documentado, main_window.py envia contexto vazio
+  ao painel quando Vendas fica ativa. Portanto, não afirmar que a IA de Vendas
+  recebe automaticamente todo o projeto, medidas ou dados comerciais.
+- A análise externa ampla de produto — inclusive pesquisa, dimensões/peso e
+  sugestão de preço — pertence ao prompt copiado na aba Anúncio e depende da
+  ferramenta externa em que o usuário o cola. A conexão de um fluxo interno
+  específico de análise de Vendas é uma implementação separada.
+
+MAPA DOS ARQUIVOS
+-----------------
+- _APP_/prompts/App_Prompts_PySide6.py: cartões, edição, cópia e snapshot da aba.
+- _APP_/prompts/__init__.py: exportações do pacote prompts.
+- _APP_/prompts/_DOC_prompts.txt: este documento.
+- _FERRAMENTAS_/Prompts.py: texto padrão e referências históricas.
+- _FERRAMENTAS_/ia_prompt_catalogo.py: armazenamento de catálogo, referências
+  e mapa sistema.json em AppData; também carrega e salva os modelos de imagem.
+- _FERRAMENTAS_/prompts_ia/catalogo.json: padrões versionados do catálogo por
+  escopo; não é usado para gravar o texto-base externo.
+- _FERRAMENTAS_/prompts_ia/geracao_imagem.json: padrões versionados dos três
+  modelos usados em Resultados.
+- _APP_/anuncio/Controller_Anuncio_PySide6.py: monta o prompt externo com o
+  texto-base editável e os dados atuais do produto.
+- _APP_/main_window.py e _IAS_/Painel_IA_PySide6.py: conexão das abas ao painel
+  interno de IA.

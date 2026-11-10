@@ -1,0 +1,175 @@
+# 📁 _APP_/_STATUS_APP.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+APP — STATUS DO MÓDULO
+Última atualização: 2026-11-09 (ícone do aplicativo integrado; validação no desktop pendente)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ATUALIZAÇÃO CONFIRMADA — 2026-09-14
+────────────────────────────────────
+✅ O fluxo do Cadastro foi testado no computador de destino com produto único
+   e duas variações.
+✅ A mesma imagem pode aparecer em mais de uma variação; cada ocorrência é
+   copiada com um nome de destino diferente.
+✅ O exemplo validado gerou nomes como ACO1_01_5x3x2_100.jpg e
+   ACO2_01_7x5x3_150.jpg.
+✅ O Cadastro grava A_ENTRADA, produtos.txt, .ordem_midias.json, as imagens
+   renomeadas e os vídeos na pasta final do produto.
+➡️ O Cadastro está concluído para esta etapa. A próxima etapa é a Produção,
+   que deverá consumir esses arquivos e a configuração salva.
+
+IMPLEMENTADO  ✅
+────────────────
+• A aplicação desktop inicia por main.py, inicializa o SQLite, cria o QApplication e abre MainWindow.
+• A janela ativa apresenta uma barra vertical à esquerda na ordem Cadastro,
+  Marketplace, Vendas e Configuração. Cada área mantém suas próprias abas horizontais;
+  Cadastro reúne Cadastro, Criação, Revisar mídias, Montar anúncio e Medidas
+  avulsas; Marketplace reúne Anúncios, Anunciar, Sociais e Registros; Vendas
+  reúne Registrar vendas e Histórico;
+  Configuração reúne Configurações, Prompts e Banco de dados.
+• Os pacotes de entrada usados pela janela ficam em _APP_/Cadastro/,
+  _APP_/Marketplace/, _APP_/Vendas/ e _APP_/Configuracao/, com subpacotes para
+  as telas.
+  Os caminhos antigos em minúsculas são mantidos para compatibilidade.
+• A fila A_ENTRADA alimenta somente o fluxo pendente da área Cadastro. As listas
+  operacionais do Marketplace mostram produtos concluídos de PRODUTOS_ATIVOS.
+• A página Anunciar e etiquetas é montada pelo pacote
+  _APP_/Marketplace/Anunciar/; a página do formulário e mídias permanece em
+  Anúncios. A publicação continua manual.
+• Os seletores de produto mostram os cadastros mais recentes primeiro, pela
+  ordem de inclusão no banco, sem ordenação alfabética.
+• Midias/icone.ico define o ícone do aplicativo e da janela. A navegação tenta
+  exibir Midias/logo.png; se indisponível, usa o ícone do aplicativo e depois
+  uma marca textual. A logo não está presente nesta cópia do workspace.
+• _APP_/criacao/ contém o ponto de entrada e o documento da aba Criação; a
+  janela importa CreationTab desse pacote.
+• _APP_/resultados/ contém a montagem visual e o contrato da aba Resultados.
+• _APP_/producao/ é suporte do motor de processamento, não uma aba de navegação.
+• A tela de cadastro usa a camada ativa em _APP_/cadastro, com galeria de mídias, cartões de medidas e campos para os dados do produto.
+• O Cadastro possui painel central dividido entre mídias encontradas e grupos de variações, kits e medidas, com divisor vertical ajustável.
+• A tela de cadastro possui seleção de pastas, configuração de produto, variações e kits, coleta de medidas e gravação do cadastro.
+• Os diálogos de origem e destino começam em Downloads quando não há uma pasta válida já selecionada.
+• Os campos de uso e descrição possuem gravação/transcrição por microfone abaixo do input, com estado visível, animação, parada e mensagem de resultado; a transcrição é acrescentada ao texto manual existente.
+• _APP_/cadastro/App_Cadastro_Prod_PySide6_Enhanced.py conecta a galeria aprimorada e tenta carregar medidas de TXT na pasta escolhida.
+• PySide6_core.py concentra o banco, a criação do produtos.txt, a cópia de mídias, a criação de pastas iniciais e as tarefas de produção.
+• _APP_/cadastro/Microfone_PySide6.py seleciona um dispositivo de entrada, captura fala em segundo plano, trata cancelamento e erros de reconhecimento e registra as etapas do fluxo no logger.
+• TaskWorker e BackgroundMixin executam tarefas demoradas em QThread e enviam progresso, conclusão ou erro.
+• O salvamento do Cadastro envia os nomes finais das imagens para o núcleo,
+  preservando a associação manual entre grupo, medidas e mídia.
+• Imagens repetidas entre grupos são permitidas e não são deduplicadas durante
+  a cópia para o destino.
+• A aba Criação mostra o cadastro mais recente, permite selecionar opções e inicia o processamento em segundo plano com o terminal sempre visível.
+• A aba Resultados mostra as galerias geradas e as ferramentas de preparação para marketplace; após uma criação bem-sucedida, ela é aberta automaticamente.
+• A aba Medidas avulsas, dentro da área Cadastro, trata imagens e vídeos sem
+  iniciar a Criação completa.
+  Usa como destino a pasta do produto selecionado ou outra pasta escolhida.
+  Cria/reutiliza H_Arq_avulsas no destino, com b_sem_fundo, c_fundo_branco,
+  d_medidas e F_video_shopee dentro dela; não cria outra pasta de produto nem
+  atualiza banco, produtos.txt ou .ordem_midias.json. Preserva os originais e
+  não sobrescreve arquivos.
+• A aba Registros consulta as tabelas VENDAS e MARKET_PLACE.
+• A aba Anúncio contém a preparação comercial por ID (marketplaces, preço,
+  custo e estoque), salva o texto revisado e oferece prévia/impressão de
+  etiquetas. A aba Vendas registra compras realizadas, atualiza as unidades
+  disponíveis em MARKET_PLACE e consulta os dados dos clientes.
+• A aba Sociais seleciona somente produtos concluídos de PRODUTOS_ATIVOS e
+  prepara blocos para Pinterest, Instagram, Facebook, TikTok e YouTube Shorts.
+  Não lista a fila A_ENTRADA nem produtos pendentes.
+  Permite selecionar mídia local para publicação manual; não usa APIs, envia
+  mídias à IA nem persiste os rascunhos.
+• A aba Prompts disponibiliza o catálogo editável por escopo, com finalidade,
+  texto e salvamento no AppData; os prompts históricos continuam como referência.
+• A janela principal exibe o painel lateral de IA em todas as abas, com balões de conversa, textarea, envio e estado da resposta.
+• _IAS_/ia_config.py persiste provedor, endereço, modelo, instruções, frases prontas e chave da IA em PASTA_APPDATA/config/config.json, dentro da chave "ia".
+• Configurações antigas do QSettings são migradas uma vez para o AppData; depois o fluxo ativo usa somente o JSON central do aplicativo.
+• _IAS_/ia_service.py envia conversas por HTTP para Ollama, OpenRouter ou endpoint compatível com OpenAI, sem cliente novo obrigatório, transmitindo os trechos recebidos.
+• O painel de IA possui botão de configurações, frases prontas, anexos textuais e gravação por microfone usando QThread.
+• A memória nova da IA fica em AppData/IAs, separada do Base_Dados.db comercial.
+  O produto cadastrado recebe uma conversa persistente e o rascunho fica somente
+  em memória durante a sessão.
+• A camada Enhanced envia ao painel um snapshot limitado do Cadastro, incluindo
+  dados da A_ENTRADA, mídias, medidas, escopo e estado de salvamento.
+• O painel mantém o rascunho sem persistência, oferece Apagar rascunho e só cria
+  o conversa_id depois que o cadastro comercial é confirmado.
+• Os módulos legados _IAS_/Ollama.py e _IAS_/OpenRouter.py foram removidos por não terem importadores ativos; o fluxo usa ia_service.py.
+
+EM DESENVOLVIMENTO  ⏳
+───────────────────────
+• [~] Validar a aba Medidas avulsas no Windows com imagem e vídeo reais,
+  incluindo a nova pasta H_Arq_avulsas e o fallback de CPU na detecção de
+  medidas; os tratamentos pesados não foram executados neste ambiente.
+• [~] Validar visualmente Anúncio/Vendas e testar prévia e impressão de etiquetas
+  no computador Windows de destino; aqui a verificação permaneceu estática.
+• [~] Validar visualmente Sociais no computador Windows: seleção de produto,
+  geração por rede, cópia dos blocos e escolha/abertura de mídia.
+• [INFORMAÇÃO NÃO CONFIRMADA] A execução visual completa do painel de IA, os
+  testes físicos do microfone e os provedores não foram validados neste ambiente.
+• A camada Enhanced tenta preencher medidas do TXT no cadastro, mas a leitura
+  de um TXT existente na origem e a integração completa com a aba Criação ainda
+  não estão confirmadas.
+• [INFORMAÇÃO NÃO CONFIRMADA] A ligação automática do Cadastro ao painel foi
+  implementada, mas ainda não foi validada executando a aplicação.
+• Arquivos não textuais anexados são identificados no chat, mas ainda não são enviados para análise visual multimodal.
+
+PENDENTE / PRÓXIMA ORDEM  🔲
+─────────────────────────────
+1. Validar manualmente a nova pipeline da Produção no computador de destino.
+2. Exibir na aba Criação o resultado da conferência do produtos.txt e dos grupos.
+3. Validar manualmente produto único, variações, kits e produto único também
+   vendido em kit com imagens reais.
+4. Definir as próximas saídas comerciais de marketplace depois da geração visual.
+5. Remover os blocos duplicados históricos sem alterar o comportamento válido.
+6. Incluir e validar explicitamente PySide6 nas dependências de instalação, se essa
+   for a decisão do projeto.
+7. Validar manualmente o rascunho, o botão Apagar rascunho e a transferência do
+   histórico para AppData/IAs depois de cadastrar um produto.
+8. Confirmar se A_ENTRADA.PRODUTO é o identificador comercial definitivo usado
+   também no estoque, na prateleira e na nota.
+9. Definir suporte para análise visual de imagens anexadas por provedores multimodais.
+10. Conferir as regras de conteúdo e mídia de cada rede antes de adicionar
+    validação automática de limites ou formatos na aba Sociais.
+
+PROBLEMAS CONHECIDOS  ⚠️
+──────────────────────────
+• main.py contém o bloco de entrada repetido várias vezes.
+• App_Janela_PySide6.py e PySide6_core.py contêm definições repetidas de classes e funções.
+• _APP_/cadastro/App_Cadastro_Prod_PySide6.py contém cópias históricas da implementação no mesmo arquivo.
+• requirements.txt importa PySide6 indiretamente pelo código, mas não declara o pacote PySide6.
+• A regra histórica previa associação alfabética; a camada Enhanced usa a ordem encontrada/ajustada na galeria. A decisão final dessa regra precisa ser confirmada.
+• A captura física do microfone depende do dispositivo, permissões e dependências do Windows e ainda não foi executada neste ambiente.
+• O painel de IA depende de um Ollama ativo ou de uma configuração válida de API para responder.
+• A execução real da memória em AppData/IAs, a retomada de conversa e a limpeza
+  de rascunhos legados ainda precisam de validação manual no desktop.
+• O código atual não comprova um identificador comercial composto por nome, peso,
+  abreviação e data; não criar um ID paralelo para corrigir isso.
+• A análise visual de imagens ainda não está implementada; anexos textuais são os únicos incorporados ao contexto.
+• A aba Sociais prepara conteúdo para uso manual; limites de dimensão, duração
+  e tamanho de arquivo por rede não são validados automaticamente.
+
+REGRAS CRÍTICAS DESTE MÓDULO
+─────────────────────────────
+• A interface principal em migração é PySide6; os arquivos Streamlit originais permanecem como referência.
+• O SQLite existente deve continuar sendo usado para os cadastros e registros.
+• Tarefas de cópia, criação de arquivos e processamento pesado não devem bloquear a janela.
+• A configuração de tipo, variações e kits deve permanecer compatível com a string lida por parse_tipo_kit.
+• O microfone deve informar claramente ao usuário quando está gravando, aguardando fala, convertendo, concluindo, cancelando ou falhando.
+
+--- Registro histórico — 2026-09-11 (persistência SQLite supersedida) ---
+As notas daquela data descreviam uma proposta de memória da IA em SQLite.
+O estado atual usa arquivos JSON/JSONL no AppData; SQLite permanece para os
+dados comerciais. A execução no desktop e os provedores ainda precisam de
+validação real.
+
+--- 2026-09-10: Conversa e configuração da IA ---
+✅ _IAS_/Painel_IA_PySide6.py: adicionados balões de conversa, textarea, anexos, microfone e botão de configuração.
+✅ _IAS_/ia_config.py e ia_service.py: adicionadas configurações locais e chamadas em streaming para Ollama, OpenRouter e endpoint compatível com OpenAI.
+✅ Painel de IA: adicionadas frases prontas, execução fora da thread principal e resposta parcial no balão em tempo real.
+✅ _IAS_/Ollama.py e _IAS_/OpenRouter.py: removidos por estarem obsoletos e não serem importados pelo fluxo atual.
+
+--- 2026-09-10: Organização do Cadastro e painel de IA ---
+✅ _APP_/cadastro/: módulos exclusivos do Cadastro foram separados da raiz de _APP_.
+✅ _IAS_/Painel_IA_PySide6.py: painel visual de IA separado e disponibilizado na janela principal.
+✅ Cadastro: área central dividida em dois painéis verticais ajustáveis.
+
+--- 2026-09-10: Correção do microfone e logs ---
+✅ App_Cadastro_Prod_PySide6.py: corrigido o início da captura e preservada a digitação manual junto da transcrição.
+✅ Microfone_PySide6.py: adicionados logs para dispositivo, calibração, captura, transcrição, cancelamento e falhas.

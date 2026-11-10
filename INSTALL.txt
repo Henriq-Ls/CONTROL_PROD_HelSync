@@ -1,4 +1,9 @@
 # ------------------------- OBRIGATÓRIO --------------------------------
+py -3.11 -m venv .venv
+python -m venv .venv
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+.\.venv\Scripts\Activate.ps1
+
 python.exe -m pip install --upgrade pip     # Atualiza o pip (gerenciador de pacotes do Python)
 python -m pip install --upgrade setuptools wheel    # Atualiza ferramentas essenciais de build (compilação de pacotes)
 
@@ -10,6 +15,7 @@ pip install pymatting
 pip install pooch
 pip install plotly
 pip install pywin32
+pip install PyAudio==0.2.14
 
 PARA USAR CUDA, INSTALE O TORCH CUDA:
 pip uninstall onnxruntime onnxruntime-gpu rembg numpy -y
@@ -90,55 +96,3 @@ pip install -r requirements.txt
 
 # Gera lista atual de dependências do ambiente
 pip freeze > requirements.txt
-
-
-# ------------------------- CRIAR ARQUIVOS VIA COMANDO --------------------------------
-# Cria arquivo Python
-ni nome_arq.py -ItemType File
-
-# Cria pasta
-ni pasta -ItemType Directory
-
-# Cria arquivo dentro de pasta (força criação)
-ni .\pasta\nome_arq.py -Force
-
-
-# ------------------------- LISTAR PROJETOS --------------------------------
-# Lista arquivos do projeto ignorando pastas técnicas
-Get-ChildItem -Recurse -File |
-Where-Object {
-    $_.FullName -notmatch "\\.venv\\" -and
-    $_.FullName -notmatch "\\.git\\" -and
-    $_.FullName -notmatch "\\__pycache__\\" -and
-    $_.FullName -notmatch "\\.idea\\"
-} |
-Sort-Object FullName |
-ForEach-Object {
-    $_.FullName.Replace("$PWD\", "")
-} |
-ForEach-Object {
-    $_ -replace "\\", " └─ "
-}
-
-
-# ------------------------- CRIADOR DE EXE (STREAMLIT) --------------------------------
-# Build do app Streamlit em executável
-streamlit-desktop-app build APP_.py `
-    --name Stream_IDE `
-    --streamlit-options --theme.base=dark `
-    --pyinstaller-options `
-    --onedir --noconfirm `
-    --icon icon.ico
-
-# OBS: usar collect-data certifi para HTTPS funcionar corretamente
-# (requests depende do certifi para validação SSL)
-
-# OPCIONAL:
-# --onefile  # gera executável único
-
-
-# ------------------------- RODAR APP --------------------------------
-streamlit run APP_.py
-
-python -m streamlit run APP_.py
-python .\_GERENTE_PROJETO_\b__FORMATAR_CODIGO.py

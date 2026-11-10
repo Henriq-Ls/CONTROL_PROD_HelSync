@@ -1,4 +1,5 @@
 streamlit==1.57.0
+PySide6==6.11.2
 openai==1.82.0
 streamlit_mic_recorder==0.0.8
 
@@ -16,6 +17,7 @@ transformers==4.51.3
 opencv-python-headless==4.10.0.84
 plotly==6.7.0
 SpeechRecognition==3.16.1
+PyAudio==0.2.14
 GitPython==3.1.50
 pywin32==311
 pooch==1.9.0

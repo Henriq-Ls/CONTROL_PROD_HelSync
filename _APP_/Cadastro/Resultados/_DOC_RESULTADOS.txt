@@ -1,0 +1,90 @@
+HEN-PLACE-CONTROL
+DOCUMENTAÇÃO DA ABA RESULTADOS
+Última atualização: 2026-10-12
+
+PAPEL DA ABA
+------------
+
+Resultados mostra as mídias geradas e o fluxo local de preparação para
+marketplace. A montagem visual está em App_Resultados_PySide6.py; as ações
+continuam conectadas ao controlador da aba Criação para preservar a lógica já
+existente.
+
+LAYOUT
+------
+
+1. A galeria principal tem um seletor para alternar entre Sem fundo, Fundo
+   branco, Fundo capa e Medidas; apenas a pasta escolhida fica visível. As
+   miniaturas quebram linha e rolam na vertical, sem barra horizontal.
+2. Vídeo Shopee fica ao lado da galeria, com prévia e controles compactos.
+3. F · Pré-marketplace e G · Marketplace pronto ficam em duas colunas abaixo.
+4. “Editar prompts” abre os três modelos de imagem em abas, usando o mesmo
+   editor e o mesmo salvamento no AppData da aba Prompts.
+
+A galeria selecionada e a prévia de vídeo usam painéis simples, sem caixas
+decorativas aninhadas. F e G mantêm um contorno discreto por seção: títulos,
+ações, recursos e galerias ficam contidos no mesmo painel.
+
+A barra de F usa rótulos curtos para caber junto da galeria. Os seletores da
+seção usam fundo escuro e área da seta contrastante; o menu de seleção mostra a
+seta junto do texto. Os controles ficam compactos para evitar que ultrapassem a
+largura do painel.
+
+Os cartões de Sem fundo, Fundo branco e Fundo capa têm quatro botões abaixo da
+imagem: “Add”, “Capa”, “Uso” e “Detalhe”. Cada cartão abre o prompt para a
+imagem correspondente, sem precisar escolher outra imagem numa faixa central.
+Há espaço entre os cartões e entre os botões para facilitar a leitura. Os
+cartões de Medidas têm um botão “Add” para copiar aquela imagem para F.
+“Editar prompts” abre Capa principal, Produto em uso e Detalhes do produto; cada
+modelo pode ser editado e salvo separadamente no AppData, compartilhando os dados
+com a aba Prompts.
+
+FLUXO
+-----
+
+- As galerias leem as pastas de saída existentes do produto atual.
+- “Add” nas galerias de imagens adiciona uma cópia à pasta F, sem alterar a
+  imagem de origem.
+- “Capa”, “Uso” e “Detalhe” abrem o modelo correspondente já preenchido para
+  aquela imagem.
+- O diálogo mostra a imagem ampliada e o prompt. Ele oferece cópia do prompt,
+  da imagem em si e somente do diretório da imagem; não exibe o caminho completo
+  do arquivo nem recursos opcionais de logo/fundo.
+- F aceita importação e seleção de imagens; remover afeta apenas arquivos dentro
+  de F e exige a confirmação existente. Adicionar sempre copia a imagem sem
+  aplicar ajustes nem reduzir seu tamanho.
+- Clicar na miniatura de F abre o editor daquela imagem, com a prévia ao lado
+  dos controles de logo, @, endereço da loja e texto personalizado. Cada opção
+  é independente e começa desativada; a logo da Criação normal não é aplicada
+  automaticamente em F. @ e endereço vêm de Configurações; o texto
+  personalizado é digitado no editor. As posições são fixas: logo no alto à
+  esquerda, @ no alto à direita, endereço embaixo à esquerda e texto
+  personalizado embaixo à direita.
+- “OK · só esta imagem” salva os ajustes apenas para a imagem aberta. “Aplicar
+  às marcadas” copia a mesma configuração para as imagens marcadas na galeria;
+  “Aplicar em todas de F” aplica a configuração a todas as imagens da pasta.
+  As receitas por imagem ficam num manifesto JSON separado, não exibido na
+  galeria, e sobrevivem ao fechamento do aplicativo. Essas ações não alteram os
+  arquivos de imagem em F.
+- “Concluir e enviar para G” usa a receita salva de cada imagem marcada, reduz
+  cada cópia para no máximo 2.000.000 bytes e grava os resultados finais em G.
+  Imagens sem receita são copiadas sem logo nem texto. F e as originais não são
+  alteradas. “Enviar” significa copiar localmente para G; não há publicação
+  externa.
+- G não publica nem envia arquivos externamente.
+- A aba atualiza após criação e é aberta automaticamente após conclusão.
+
+INTEGRAÇÃO
+----------
+
+    _APP_/main_window.py
+        -> usa a página de resultados da CreationTab
+        -> apresenta Resultados como aba superior
+    _APP_/criacao/App_Criacao_PySide6.py
+        -> chama build_results_page() durante a construção da interface
+    _APP_/resultados/App_Resultados_PySide6.py
+        -> monta galerias, controles F/G e prévia do vídeo
+
+A lógica de arquivos e de marketplace permanece no controlador integrado à
+Criação. Esta separação organiza a interface e os documentos por aba sem duplicar
+regras de tratamento ou caminhos de dados.

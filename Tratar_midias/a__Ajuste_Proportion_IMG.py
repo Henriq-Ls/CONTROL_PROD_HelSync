@@ -6,7 +6,12 @@ from pathlib import Path
 from PIL import Image, ImageOps
 EXTENSOES=(".jpg",".jpeg",".png",".webp")
 
-def Proporcao_IMG(pasta_entrada,pasta_saida,proporcao):
+def Proporcao_IMG(
+    pasta_entrada,
+    pasta_saida,
+    proporcao,
+    preservar_resolucao=False,
+):
     pasta_entrada=Path(pasta_entrada)
     pasta_saida=Path(pasta_saida)
     pasta_saida.mkdir(parents=True,exist_ok=True)
@@ -20,16 +25,25 @@ def Proporcao_IMG(pasta_entrada,pasta_saida,proporcao):
 
         pw,ph=proporcao
 
-        base=1600
-        aw=base
-        ah=int(base*ph/pw)
+        if preservar_resolucao:
+            if w * ph > h * pw:
+                aw = w
+                ah = (w * ph + pw - 1) // pw
+            else:
+                ah = h
+                aw = (h * pw + ph - 1) // ph
+            nw, nh = w, h
+        else:
+            base=1600
+            aw=base
+            ah=int(base*ph/pw)
 
-        # NÃO REDUZ FORÇADO
-        ratio=min(aw/w,ah/h)
-        nw=int(w*ratio)
-        nh=int(h*ratio)
+            # NÃO REDUZ FORÇADO
+            ratio=min(aw/w,ah/h)
+            nw=int(w*ratio)
+            nh=int(h*ratio)
 
-        img=img.resize((nw,nh),Image.LANCZOS)
+            img=img.resize((nw,nh),Image.LANCZOS)
 
         canvas=Image.new("RGB",(aw,ah),(255,255,255))
         x=(aw-nw)//2

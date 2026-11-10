@@ -157,7 +157,7 @@ Composição horizontal 1:1, alta resolução 4K, estilo foto de produto para e-
 '''
 
 def gerar_prompt_shopee_(imagens, descricao):
-    from Functions import extrair_medidas
+    from _FERRAMENTAS_.Functions import extrair_medidas
     prompts = {}
 
     for i, imagem in enumerate(imagens, start=1):
@@ -212,7 +212,7 @@ def gerar_prompt_shopee(imagens, descricao):
     Mantém o produto fiel à imagem original, sem exageros da IA,
     mas com estilização profissional no fundo e iluminação.
     """
-    from Functions import extrair_medidas
+    from _FERRAMENTAS_.Functions import extrair_medidas
     prompts = {}
 
     for i, imagem in enumerate(imagens, start=1):

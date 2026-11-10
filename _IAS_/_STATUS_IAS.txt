@@ -1,0 +1,207 @@
+# 📁 _IAS_/_STATUS_IAS.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  IAS — STATUS DO MÓDULO
+  Última atualização: 2026-10-12 (respostas diretas, cópia simples e captura manual)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LEGENDA DAS CAIXAS
+──────────────────
+[x] concluído no código
+[~] em desenvolvimento ou aguardando validação manual
+[ ] ainda não feito
+[?] não confirmado no ambiente
+
+IMPLEMENTADO  ✅
+────────────────
+[x] Painel lateral com configuração, conversa, anexos textuais, microfone e
+    respostas em streaming.
+[x] A captura compartilhada pelo chat e pelo Cadastro permanece ativa durante
+    pausas e encerra somente após o usuário clicar para parar.
+[x] Respostas da IA seguem instrução obrigatória de texto direto e sem Markdown;
+    a exibição remove formatação comum e a cópia de uma resposta entrega uma linha.
+[x] Configuração centralizada de provedor, modelo, endpoint, instruções e frases.
+[x] Fallback entre provedores preservado no ia_service.py.
+[x] _IAS_/ia_memory.py mantém a interface de compatibilidade para
+    ia_memory_appdata.py; a memória ativa usa JSON/JSONL em AppData, não tabelas
+    no SQLite comercial.
+[x] Snapshot do Cadastro enviado ao painel com campos, mídias, medidas,
+    identificação da tabela A_ENTRADA e estado de salvamento.
+[x] Históricos persistentes vinculados ao produto e separados pela chave da aba;
+    escopo lógico do prompt não é usado como chave de armazenamento.
+[x] Mensagens do usuário e respostas concluídas persistidas por produto.
+[x] O identificador usado nesta primeira ponte é a chave existente
+    A_ENTRADA.PRODUTO; nenhum UUID paralelo foi criado.
+[x] MainWindow define contextos separados para Cadastro, Criação/Resultados,
+    Anúncio, Vendas, Registros, Prompts e Configurações.
+[x] Somente o escopo Cadastro habilita ferramentas de leitura/proposta de edição.
+[x] Resumo funcional do projeto e da aba ativa incluído no contexto do modelo.
+[x] O serviço registra tentativas, duração e resultado por provedor sem gravar o
+    texto do usuário, o conteúdo da resposta ou a chave da API.
+[x] O streaming identifica erros enviados em eventos SSE e respostas finais JSON;
+    transmissões sem texto registram diagnóstico sanitizado.
+[~] Conversas globais sem produto são persistidas separadamente por aba; a
+    política de retenção ainda precisa ser definida.
+[x] Regras obrigatórias de resposta em linguagem natural em todos os escopos;
+    JSON somente quando solicitado explicitamente.
+[x] Troca de produto, aba ou snapshot durante uma resposta é enfileirada até a
+    conclusão, evitando atribuir a resposta ao contexto seguinte.
+[x] A aba Prompts carrega o catálogo editável por escopo e mostra prompts
+    históricos apenas como referência/cópia.
+[x] Anúncio usa contexto textual, não envia imagens e não interpreta nem aplica
+    JSON automaticamente.
+[x] Criação e Resultados identificam a tela ativa no snapshot e no resumo enviado
+    ao worker; os históricos agora ficam separados apesar do escopo lógico
+    compartilhado ``Producao``.
+[x] Cadastro em rascunho é instruído a não herdar identidade de produto anterior;
+    snapshots globais vazios não são rotulados como contexto de produto.
+[x] O botão Enviar ignora o booleano `checked` emitido pelo Qt; o texto digitado
+    é enviado e o campo é limpo como esperado.
+[x] Bolhas do chat declaram altura dependente da largura e notificam o layout
+    quando a resposta em streaming muda.
+[x] O simulador offline percorre o roteamento real de MainWindow, troca de
+    contexto do painel, montagem da mensagem final e captura no worker falso.
+[x] Guardas obrigatórias de fidelidade factual são acrescentadas depois dos
+    prompts editáveis; proíbem completar ou embelezar fatos de produtos/registros,
+    usar respostas anteriores da IA como prova e escolher valores conflitantes.
+[x] O Cadastro recebe instrução explícita para preservar a especificidade dos
+    dados e pedir esclarecimento antes de usar fatos conflitantes em uma proposta.
+[x] O catálogo padrão possui instruções por escopo para as oito abas; cada
+    solicitação também recebe as regras obrigatórias mantidas no código.
+[x] Catálogos do AppData já existentes passam a exibir os escopos padrão ausentes,
+    sem substituir instruções personalizadas salvas pelo usuário.
+[x] Criação, Resultados, Cadastro e Anúncio carregam somente o histórico da
+    combinação de produto e aba ativa; conversas globais também separam Criação
+    e Resultados.
+[x] Ao conversar sobre um produto salvo, as mensagens recentes das outras abas
+    do mesmo produto entram como contexto de referência para a IA. A conversa
+    exibida permanece separada e mensagens antigas não são tratadas como pedidos
+    atuais.
+[x] O contexto compartilhado não cruza produtos nem inclui a aba atual; o
+    histórico misto legado é rotulado como de subaba desconhecida. O tamanho é
+    limitado a 16.000 caracteres.
+[x] “Apagar conversa” remove somente o histórico da aba/produto ativos, sem
+    apagar identidade do produto, conversas de outras abas ou o legado misto.
+[x] O histórico misto antigo de Produção permanece preservado e pode ser
+    consultado em modo somente leitura; na memória compartilhada, aparece
+    identificado como legado, sem subaba de origem determinada.
+[x] A simulação confirma o escopo/snapshot das oito abas, a separação entre
+    Criação e Resultados, o isolamento ao trocar de produto, Cadastro sem produto
+    e o clique Enviar com `False` do Qt.
+[x] A suíte offline passou em 17 testes em 2026-10-12, incluindo histórico
+    separado, contexto compartilhado entre abas do mesmo produto, isolamento
+    entre produtos e preservação do legado; não inicia PySide6 nem acessa
+    provedores reais.
+
+EM DESENVOLVIMENTO  ⏳
+──────────────────────
+[i] A separação de histórico e seus testes offline estão concluídos. Os itens
+    abaixo dependem de validação manual no desktop, que será feita pelo usuário.
+[~] No desktop, conferir a leitura de respostas SSE/JSON e os detalhes de erro
+    para cada provedor, incluindo OpenRouter; confirmar que a causa detalhada
+    fica visível na conversa, não apenas no status genérico.
+[~] Falhas agora geram bolha do Sistema com categoria, causa, detalhe sanitizado
+    e próximo passo; o painel remove o placeholder e rola até a mensagem. A
+    confirmação visual no desktop ainda está pendente.
+[~] Usuário validará no desktop o cadastro, os contextos por escopo e a
+    persistência de conversas em AppData/IAs.
+[~] Validar no desktop com o provedor configurado se os prompts mais estritos
+    deixam de acrescentar funções, propriedades ou benefícios não informados.
+    Caso observado: não expandir “abridor” para latas; não inferir aroma do
+    cedro rosa; não escolher entre peso aproximado de 20 g e campo de 25.
+[~] Usuário confirmará visualmente no Windows que bolhas longas de usuário e IA crescem
+    e exibem todo o texto durante e após o streaming.
+[~] Confirmar no uso real se A_ENTRADA.PRODUTO é o identificador comercial
+    definitivo também usado no estoque, prateleira e nota.
+[~] Ajustar o histórico visual depois de observar o primeiro cadastro real.
+[~] Validar o comportamento de cada provedor sem executar chamadas neste ambiente.
+
+PENDENTE / PRÓXIMA ORDEM  🔲
+─────────────────────────────
+1. No desktop Windows, validar os contextos, a persistência de produto/rascunho,
+   perguntas comuns e pedidos explícitos de JSON, bolhas, streaming, erros e
+   exclusão durante uma solicitação, para cada provedor configurado.
+2. Confirmar com dados de teste qual identificador liga A_ENTRADA.PRODUTO a
+   VENDAS, MARKET_PLACE, estoque, prateleira e nota; até lá, não conectar leitura
+   comercial de Vendas/Registros à IA.
+3. Definir retenção para conversas globais e, após validar identidade/histórico,
+   projetar resumos curtos de fatos confirmados e pendências em AppData/IAs.
+4. Ampliar ferramentas somente com propostas tipadas, revisão e confirmação;
+   não ampliar escrita para outras abas nesta etapa.
+5. Definir e validar suporte visual por provedor antes de enviar imagens.
+
+ESTADO POR INTELIGÊNCIA ARTIFICIAL
+───────────────────────────────────
+Ollama
+[x] integração HTTP existente
+[x] pode participar da ordem de fallback configurada
+[~] memória e contexto do Cadastro conectados no código, aguardando validação
+[ ] teste real do endpoint e do modelo
+
+OpenRouter
+[x] integração HTTP existente
+[x] pode participar da ordem de fallback configurada
+[~] memória e contexto do Cadastro conectados no código, aguardando validação
+[~] log do desktop: uma mensagem recebeu 100 caracteres em 4,3 s; a seguinte
+    terminou em 15,2 s sem texto, com 466 eventos e finish_reason=length. O
+    código agora eleva max_tokens para 4096 somente em openrouter/free e processa
+    SSE incrementalmente; confirmar no desktop se a resposta passa a aparecer.
+
+OpenAI compatível
+[x] integração por endpoint compatível existente
+[x] pode participar da ordem de fallback configurada
+[~] memória e contexto do Cadastro conectados no código, aguardando validação
+[ ] confirmar formato específico de erro, streaming e JSON estruturado
+
+PROBLEMAS CONHECIDOS  ⚠️
+─────────────────────────
+[?] A execução visual com PySide6, o microfone, o banco real e os provedores não
+    foram executados nesta sessão.
+[~] Confirmar no desktop que pausas longas não encerram a captura e que o segundo
+    clique finaliza, transcreve e insere o áudio tanto no chat quanto nos campos.
+[~] Confirmar no desktop que respostas e texto copiado não contêm Markdown,
+    preâmbulos ou quebras de linha ao copiar conteúdo para um único campo.
+[i] Diagnóstico OpenRouter (log do desktop, 2026-10-12): de duas mensagens de
+    cinco caracteres, uma recebeu resposta; a outra, com 21 mensagens enviadas,
+    recebeu 466 eventos SSE válidos, mas nenhum texto e terminou com
+    finish_reason=length após 15,2 s. A versão registrada usava max_tokens=1500.
+    A requisição chegou ao provedor; não há evidência de falha de internet. O
+    modelo roteado e o uso de reasoning ainda são desconhecidos.
+[~] Erros agora aparecem como bolha com causa/ação segura; o stream SSE atualiza a
+    interface enquanto chega. Validar no desktop: chave ausente, conexão, HTTP,
+    timeout, limite de saída, resposta vazia e mascaramento de credenciais.
+[~] Usuário confirmará no desktop que “Apagar conversa” afeta somente a
+    aba/produto ativos e descarta respostas pendentes; a conexão pode terminar em
+    segundo plano.
+[~] Usuário confirmará visualmente no desktop o botão e a janela de consulta do
+    histórico legado de Produção.
+[i] O usuário informa que a exceção Qt/Windows 0x8001010d ocorre em mais de 20
+    programas PySide6 no Windows. Tratar como problema geral do ambiente Qt/Windows,
+    fora deste escopo; não investigar nem tentar corrigir no aplicativo.
+[?] O código atual não comprova um ID composto por nome, peso, abreviação e data.
+[ ] O ID comercial definitivo precisa ser confirmado antes de expandir a memória
+    para Produção, Registros ou nota de venda.
+[?] Existem definições históricas duplicadas no projeto; a camada Enhanced é o
+    caminho ativo do Cadastro.
+
+REGRAS CRÍTICAS DESTE MÓDULO
+─────────────────────────────
+[x] Manter SQLite para os dados comerciais; a memória da IA usa arquivos JSON e
+    JSONL no AppData, sem criar tabelas de memória no banco comercial.
+[x] Não criar um identificador paralelo exclusivo da IA.
+[x] Não enviar banco ou pasta inteira ao provedor.
+[x] Não deixar a IA alterar widgets, banco ou arquivos sem revisão e confirmação.
+[x] Não expor chaves de API em logs, mensagens ou snapshots.
+[x] Não exibir JSON técnico, HTML bruto ou payload de ferramenta na conversa do usuário.
+[x] Não inventar nem embelezar fatos de produtos ou registros; conflitos pendentes
+    devem ser expostos e excluídos de textos comerciais até confirmação.
+[x] A IA preenche somente nome, descrição e serventia; seleções ficam como sugestão.
+[x] Origem, destino e proporção ficam fora do contexto enviado à IA.
+[x] Toda escrita proposta pela IA exige confirmação visual no pop-up do Cadastro.
+[x] Falha na pesquisa de URL interrompe a montagem automática para evitar
+    conteúdo inventado a partir do endereço.
+
+--- Registro histórico — 2026-09-11 (persistência SQLite supersedida) ---
+As notas antigas desta data descreviam uma proposta de memória em tabelas SQLite.
+O estado atual é o descrito acima: memória em JSON/JSONL no AppData, com SQLite
+reservado às tabelas comerciais. A validação real do Cadastro, das URLs e dos
+provedores continua pendente no computador de destino.

@@ -1,0 +1,695 @@
+HEN-PLACE-CONTROL
+DOCUMENTAÇÃO TÉCNICA ATUAL DA PIPELINE DE PRODUÇÃO
+
+Data da atualização: 11/10/2026
+Área: _APP_/producao/
+Documento de continuidade: fluxo ativo, pastas, saídas, tela e pendências.
+
+LEIA PRIMEIRO
+-------------
+
+Este documento descreve o código ativo da Produção PySide6, não uma proposta.
+O relatório de análise complementar está em:
+
+    _APP_/producao/_RELATORIO_PIPELINE_PRODUCAO.txt
+
+O aplicativo e a pipeline não foram executados durante esta atualização.
+Os resultados do teste real citados abaixo são os do log/listagem fornecidos
+para 11/10/2026; não são uma execução feita nesta revisão.
+
+===============================================================================
+1. VISÃO GERAL DO FLUXO ATIVO
+===============================================================================
+
+    Cadastro PySide6
+        -> salva produto e classificação em A_ENTRADA
+        -> copia imagens e vídeos para a pasta do produto
+        -> grava produtos.txt e .ordem_midias.json
+        -> prepara a_ajuste_geral com PNGs em alta resolução
+    Produção PySide6
+        -> lê o último cadastro
+        -> valida manifesto, imagens, medidas e pesos
+        -> agrupa as imagens conforme os nomes e a ordem do Cadastro
+        -> gera prévias somente ao selecionar recursos visuais
+        -> gera/reutiliza b_sem_fundo e c_fundo_branco
+        -> gera E_fundo_capa com o fundo escolhido e a sombra configurada
+        -> compõe d_medidas com fundo, anotações, logo e referência
+        -> grava VENDAS
+        -> converte o primeiro vídeo do manifesto em F_video_shopee, se houver
+        -> grava formas_venda.json
+        -> atualiza as saídas exibidas na aba superior Resultados
+
+Arquivos centrais:
+
+    _APP_/main_window.py
+        Janela ativa e ligação com o painel lateral de IA.
+
+    _APP_/criacao/Controller_Criacao_PySide6.py
+        Controlador ativo da aba Criação. A montagem visual da página
+        Resultados fica em _APP_/resultados/App_Resultados_PySide6.py.
+
+    _APP_/producao/App_Producao_PySide6.py
+        Shim de compatibilidade para imports históricos; não é a classe ativa
+        da interface.
+
+    _APP_/producao/pipeline.py
+        Execução atual da produção e gravação das saídas.
+
+    _APP_/PySide6_core.py
+        Acesso ao cadastro/banco, cópia das mídias e criação das pastas iniciais.
+        Também contém código histórico duplicado; não confundir cópias com a
+        pipeline ativa.
+
+===============================================================================
+2. CONTRATO DE ENTRADA CRIADO PELO CADASTRO
+===============================================================================
+
+2.1 A_ENTRADA
+-------------
+
+O Cadastro grava produto, referência, caminho, descrição e classificação
+tipo/kit. A Produção carrega o último cadastro e usa, entre outros:
+
+    PRODUTO
+    REFERENCIA
+    DIRETORIO
+    KIT
+
+A configuração KIT pode representar:
+
+    TIPO:ÚNICO|VAR=N|KIT=NO
+    TIPO:ÚNICO|VAR=N|KIT=YES|PECAS=P|QTS_KITS=Q
+    TIPO:KIT|PECAS=P|VAR=...|QTS_KITS=Q
+
+2.2 Nomes das imagens
+---------------------
+
+O Cadastro salva nomes finais que identificam grupo, sequência, medidas e
+peso. Formato típico:
+
+    <GRUPO>_<SEQUÊNCIA>_<ALTURA>x<LARGURA>x<ESPESSURA>_<PESO>.<EXT>
+
+Exemplo:
+
+    CSE1_01_7x5x2_100.jpg
+    CSE1_02_7x5x2_100.jpg
+    CSE1_03_7x5x2_100.jpg
+
+A ocorrência de uma imagem em mais de um grupo pode ser copiada com nomes
+finais distintos. Isso é intencional se ela participa de cartões/grupos
+diferentes no Cadastro.
+
+2.3 produtos.txt
+----------------
+
+Uma linha por imagem, no formato:
+
+    altura x largura x espessura,peso
+
+O arquivo é uma conferência de quantidade, medidas e peso. Não contém uma
+associação explícita imagem/grupo/papel; a Produção não deve tentar reconstruir
+essa associação pela posição do TXT.
+
+2.4 .ordem_midias.json
+----------------------
+
+É a ordem oficial das mídias salva pelo Cadastro. Contém nomes finais de
+imagens seguidos pelos nomes de vídeos copiados. A Produção usa a sequência
+para formar os grupos e descobrir as funções das imagens. A ordem do sistema de
+arquivos e qualquer ordenação alfabética não substituem o manifesto.
+
+2.5 O que copiar_cadastro() grava
+---------------------------------
+
+Na pasta de destino:
+
+  - cria a pasta do produto se ela ainda não existe;
+  - grava/sobrescreve produtos.txt;
+  - copia as imagens com os nomes finais do Cadastro;
+  - copia os vídeos com seus nomes originais;
+  - sobrescreve .ordem_midias.json com a ordem atual;
+  - não remove automaticamente arquivos de produções/cadastros anteriores
+    que ficaram fora da nova lista.
+
+2.6 Pastas iniciais do Cadastro
+-------------------------------
+
+gerar_pastas_iniciais() prepara:
+
+    a_ajuste_geral/
+
+A pasta contém somente os PNGs preparados pelo Cadastro. A proporção escolhida
+cria um canvas branco em espaço temporário, sem reduzir os pixels do produto;
+os JPEGs originais permanecem na raiz do produto. O cadastro não grava mais
+Proportion_Ajustada nem Ajuste_Geral e não apaga pastas legadas que já existam.
+
+===============================================================================
+3. REGRA DE GRUPOS E PAPÉIS
+===============================================================================
+
+A Produção agrupa os nomes finais segundo a convenção do Cadastro, respeitando
+a ordem do manifesto dentro de cada grupo:
+
+    primeira imagem do grupo
+        -> amostra/capa
+
+    imagens entre a primeira e a última
+        -> amostras/variações
+
+    última imagem do grupo
+        -> imagem de medidas
+
+Grupo com uma única imagem:
+
+    a imagem participa tanto das amostras quanto das imagens de medidas.
+
+Exemplo com cinco arquivos em CSE1:
+
+    CSE1_01_... -> amostra/variação
+    CSE1_02_... -> amostra/variação
+    CSE1_03_... -> amostra/variação
+    CSE1_04_... -> amostra/variação
+    CSE1_05_... -> medidas
+
+Essa regra é visual e deriva do grupo/manifesto. A configuração KIT define a
+classificação comercial e as formas permitidas, mas a pipeline atual não usa
+QTS_KITS para voltar a redistribuir imagens por posição.
+
+===============================================================================
+4. VALIDAÇÃO ANTES DO PROCESSAMENTO
+===============================================================================
+
+executar_producao() confere:
+
+  1. pasta do produto existente;
+  2. .ordem_midias.json válido e com mídias presentes;
+  3. ao menos uma imagem válida;
+  4. produtos.txt existente e com quantidade de linhas compatível;
+  5. medidas e pesos do TXT compatíveis com os nomes finais;
+  6. possibilidade de separar grupos e papéis;
+  7. formas comerciais compatíveis com a classificação do Cadastro;
+  8. a_ajuste_geral com PNGs (também aceita pastas legadas como
+     a_Ajuste_Geral, A_AjusteGeral e Ajuste_Geral);
+  9. se a remoção de fundo ainda for necessária, ao menos uma imagem válida
+     na pasta de entrada selecionada.
+
+Se b_sem_fundo já tiver os nomes-base esperados, a remoção de fundo é
+reaproveitada. Em produtos novos, a_ajuste_geral deve conter somente PNGs;
+inconsistências param a Produção com erro explícito.
+
+===============================================================================
+5. RECURSOS VISUAIS E PRÉVIAS
+===============================================================================
+
+Os recursos próprios do usuário ficam na pasta de mídias do AppData:
+
+    logo/                 logos opcionais para imagens finais
+    fundo_capa/           fundos de capa/amostra
+    fundo_medida/         fundos das imagens de medidas
+    fundo_branco/         fundo branco usado em c_fundo_branco
+    logo_video/           sobreposição opcional do vídeo
+    qr_video/             QR opcional do vídeo
+    musica/               faixas de áudio cadastradas pelo usuário
+
+A aba Configurações copia cada arquivo selecionado para o AppData; o arquivo
+original escolhido permanece no local de origem. Configurações mantém um fundo
+ativo de medida, salvo em config.json; esse fundo é aplicado em d_medidas sem
+seletor na aba Criação. Em “Configuração da criação”, o usuário escolhe o
+fundo aplicado em E_fundo_capa; a etapa usa também a altura da sombra configurada.
+Sem fundo selecionado, a pasta E é criada, mas não recebe novas imagens e
+conteúdos existentes são preservados. A faixa e o volume de música também ficam
+em “Configuração da criação”. Logo e texto são os únicos ajustes aplicados em
+F→G; o fundo já presente na imagem escolhida é preservado, sem uma segunda
+composição de fundo. O fundo branco é usado em c_fundo_branco. Overlays e QR
+podem ficar ausentes; volume zero permite converter sem trilha de música.
+
+Ao selecionar ou alterar os recursos visuais, a tela chama
+gerar_previews_para_producao(), que cria ou reutiliza:
+
+    previews/CAPA_<referência>_<pasta-da-imagem>_<imagem>.<ext>_<fundo>.png
+    previews/MEDIDA_<referência>_<fundo>.png
+
+São duas composições de prévia: a capa usa a imagem selecionada na posição
+“Capa principal” do painel de capas; a medida usa uma imagem classificada como
+medida. O nome da prévia de capa inclui pasta, nome e extensão da imagem-fonte,
+para não confundir fontes diferentes. A presença dos arquivos não significa
+que a galeria tenha sido aberta. A Produção não cria essa pasta ao iniciar; o
+diretório só é criado pelo fluxo de seleção dos recursos visuais. Quando uma
+logo é selecionada, seu nome é acrescentado ao arquivo (`_LOGO_<nome>`), e a
+logo é aplicada na composição. A prévia pode ser reutilizada se o nome esperado
+existir e suas entradas não tiverem sido alteradas.
+
+===============================================================================
+6. ETAPAS E CONTRATO DE CADA PASTA
+===============================================================================
+
+As pastas automáticas a_ajuste_geral, b_sem_fundo, c_fundo_branco,
+d_medidas, E_fundo_capa e F_video_shopee ficam dentro da pasta do produto. As
+etapas A-D usam prefixos minúsculos; E e F de capa/vídeo e as áreas F/G de
+marketplace mantêm as letras maiúsculas aprovadas. E é criada ao iniciar a
+Produção; recebe imagens quando um fundo de capa está selecionado. F é criada
+para o vídeo; o MP4 só é criado quando o manifesto contém vídeo. previews
+continua sob demanda nos Recursos Visuais.
+F_pre_marketplace e G_marketplace são as áreas do fluxo atual de marketplace:
+F reúne cópias originais em preparação; G recebe cópias finais ajustadas e
+reduzidas. O código antigo de pre_capas/f_capas permanece legado e não é o fluxo
+mostrado em Resultados.
+As subetapas usadas para montar d_medidas ficam em diretórios temporários e são
+removidas.
+
+Pasta/arquivo                 Criador/etapa         Conteúdo e função
+----------------------------  --------------------  --------------------------
+Raiz do produto               Cadastro              Imagens originais, vídeos,
+                                                    produtos.txt e manifesto.
+
+a_ajuste_geral/                Cadastro              PNGs de entrada; canvas de
+                                                    proporção sem reduzir o
+                                                    produto. JPEGs originais
+                                                    permanecem na raiz.
+
+previews/                      Recursos visuais       Prévia PNG de capa e medida;
+                                                    criada sob demanda.
+
+b_sem_fundo/                   Remove_IMG            PNGs transparentes; entrada
+                                                    manual para o CapCut.
+
+c_fundo_branco/                Trocar_fundo          Imagens sobre o fundo branco
+                                                    cadastrado no AppData.
+
+d_medidas/                     Pipeline              Imagens finais de medida com
+                                                    fundo escolhido, dimensões,
+                                                    logo e referência.
+
+E_fundo_capa/                  Produção/Trocar_fundo Imagens de b_sem_fundo com o
+                                                    fundo de capa selecionado e
+                                                    sombra configurada.
+
+F_video_shopee/                Produção/Conversor    MP4 se houver vídeo no
+                                                    manifesto.
+
+F_pre_marketplace/             Preparação manual     Cópias sem redução vindas
+                                                     dos resultados ou importadas;
+                                                     permite prévia, seleção e
+                                                     remoção.
+
+G_marketplace/                 Conclusão local       Cópias finais com logo/texto
+                                                     opcionais, reduzidas a no
+                                                     máximo 2.000.000 bytes.
+
+formas_venda.json             Pipeline              Metadados da execução e dos
+                                                    grupos/formas selecionados.
+
+Conteúdo e detalhes:
+
+6.1 b_sem_fundo e c_fundo_branco
+-------------------------------
+
+b_sem_fundo recebe os PNGs de a_ajuste_geral por Remove_IMG. É o cache mais
+demorado e a fonte dos prompts manuais do CapCut; a interface filtra para
+amostras/variações e não envia imagem à IA. c_fundo_branco usa b_sem_fundo
+como fonte e compõe o fundo branco cadastrado. As duas pastas mantêm os
+nomes-base do manifesto.
+
+6.2 d_medidas
+--------------
+
+A pipeline seleciona de b_sem_fundo somente as imagens classificadas como
+medidas e executa Trocar_fundo, Colocar_medidas e Adicionar_logo_completa em
+diretórios temporários do sistema. O resultado final, já com o fundo de medida
+escolhido, anotações, logo opcional e referência, é copiado para d_medidas. Os diretórios
+temporários são removidos automaticamente. O fluxo novo não cria b_Fundo_Medida,
+Imag_med, c_Medida_SEM_LOGO ou d_Medida_COM_LOGO; pastas antigas que já existam
+permanecem sem alteração.
+
+6.3 Fundo de capa, Resultados e VENDAS
+--------------------------------------
+
+A etapa E_fundo_capa aplica Trocar_fundo a todas as imagens de b_sem_fundo,
+usando o recurso de fundo de capa escolhido em Configuração da produção e a
+altura de sombra configurada. A saída é gravada em E_fundo_capa. Se não houver
+fundo selecionado, a pasta é criada, mas a etapa não gera novas imagens nem
+remove arquivos existentes. As imagens de E podem ser adicionadas a
+F_pre_marketplace como cópias, à escolha do usuário.
+
+A aba “Resultados” organiza a tela em faixas horizontais, sem caixas decorativas
+aninhadas:
+
+    1. Sem fundo ocupa toda a primeira faixa, com cartões mais altos.
+    2. Fundo branco e Fundo capa dividem a segunda faixa, também com cartões
+       mais altos.
+    3. Medidas ocupa a maior parte da terceira faixa; Vídeo Shopee fica em uma
+       coluna compacta ao lado.
+    4. F · Pré-marketplace e G · Marketplace pronto ficam lado a lado abaixo.
+
+As galerias usam cartões ampliados e rolagem horizontal para coleções maiores.
+Medidas usa o mesmo cartão visual, sem ações que não se aplicam a essa galeria.
+Os cartões de Sem fundo, Fundo branco e Fundo capa têm quatro botões abaixo da
+imagem: “Add”, “Capa”, “Uso” e “Detalhe”. Cada prompt usa diretamente a imagem
+daquele cartão. Não há seletor central de prompt nem botões para copiar a pasta
+nos cabeçalhos.
+
+O bloco Vídeo contém um reprodutor embutido com controle de reprodução e opção
+de abrir o arquivo no reprodutor externo. O cartão mostra o nome do vídeo, não
+seu caminho completo.
+
+Ao clicar “Capa”, “Uso” ou “Detalhe”, a janela abre com a imagem ampliada e o
+prompt preenchido. Ela oferece ações para copiar o prompt, copiar a imagem para
+a área de transferência ou copiar somente o diretório da imagem. Não exibe o
+caminho completo do arquivo nem caminhos de logo/fundo como recursos opcionais.
+F também permite importar imagens, marcar uma ou várias e remover as marcadas
+mediante confirmação. Adicionar copia sem reduzir nem editar. Clicar na imagem
+abre uma prévia não destrutiva de logo/texto, mantida em cache na sessão; mudar
+os recursos gera uma composição diferente e restaurar as opções reutiliza a
+prévia em cache. A remoção opera somente dentro de F; arquivos de origem fora
+de F e imagens já gravadas em G permanecem intactos.
+
+“Concluir e enviar para G” aplica logo/texto às cópias selecionadas e as grava
+diretamente em G_marketplace, reduzindo cada arquivo a no máximo 2.000.000 bytes.
+Não há uma segunda etapa de aprovação. F e as imagens de origem não são
+alteradas; o envio é uma cópia local, sem publicação externa.
+
+As galerias mantêm rolagem para coleções maiores, e os cartões/áreas F e G não
+usam caixas aninhadas. Os caminhos locais das imagens podem ser copiados pelas
+ações disponíveis; nenhuma imagem é enviada à IA do aplicativo.
+
+Os registros de VENDAS usam os JPGs finais de d_medidas. A atualização remove
+somente registros do mesmo produto, preservando os demais produtos no banco.
+
+6.4 Vídeo
+---------
+
+Se o manifesto contiver vídeo, a pipeline cria ou atualiza
+F_video_shopee/video_<referência>.mp4 somente quando a saída estiver ausente ou
+desatualizada. Quando F ainda não existe, a pasta legada
+e_video_shopee_convertido (ou Video_shopee_convertido) é renomeada para
+F_video_shopee, preservando seus arquivos. Se F já existe, as pastas antigas
+permanecem intactas e podem servir como fallback de leitura na galeria. O
+original continua na raiz do produto. Sem vídeo no manifesto, nenhuma conversão
+é iniciada; arquivos convertidos de execuções anteriores não são apagados.
+
+O conversor recebe logo, QR, faixa e link a partir das configurações do usuário.
+Cada overlay e o texto do link são opcionais. A faixa é escolhida na Produção;
+volume zero omite a trilha. O conversor limita a duração a no máximo 59 segundos,
+redimensiona para largura máxima de 1080 px, aplica ajustes e fades e tenta
+manter o resultado abaixo de 30 MB. Um destino já existente pula a conversão.
+
+6.5 formas_venda.json
+---------------------
+
+É escrito ao final da execução, em UTF-8, na raiz do produto. Contém:
+
+    produto
+    configuracao_cadastro
+    formas
+    grupos
+
+Sobrescreve o arquivo anterior. É um registro local, não um anúncio, não
+alimenta MARKET_PLACE e não é usado para selecionar quais imagens entram em
+VENDAS.
+
+===============================================================================
+7. ORDEM COMPLETA DAS ETAPAS
+===============================================================================
+
+1. A aba Criação carrega o cadastro selecionado e seus recursos.
+2. Ao iniciar, passa os parâmetros para executar_producao().
+3. A pipeline lê manifesto e TXT; valida nomes, medidas e pesos.
+4. Separa grupos, amostras/variações e medidas.
+5. Deriva as formas de venda permitidas da classificação do Cadastro.
+6. Confere a_ajuste_geral (ou uma pasta legada) e se a remoção precisa ser
+   refeita.
+7. Resolve logo, fundo de capa, fundo de medida e fundo branco; não cria previews.
+8. Gera/reutiliza b_sem_fundo.
+9. Gera/reutiliza c_fundo_branco.
+10. Compõe d_medidas em espaço temporário e grava somente o resultado final.
+11. Gera E_fundo_capa com fundo e sombra, se um fundo estiver selecionado.
+12. Grava registros de VENDAS para o produto atual.
+13. Usa F_video_shopee (renomeando a pasta legada se F não existir) e converte
+    o primeiro vídeo somente se a saída estiver ausente ou se as
+    entradas/configurações do vídeo mudaram.
+14. Grava formas_venda.json e informa “Produção concluída.”
+15. O worker emite o sinal de conclusão; a janela abre a aba superior
+    “Resultados” e atualiza as galerias. O terminal permanece na aba “Criação”.
+
+A ordem da etapa de VENDAS antes da conversão de vídeo é relevante: uma falha
+posterior no vídeo pode ocorrer depois de a tabela já ter sido alterada.
+
+===============================================================================
+8. INTERFACE DE CRIAÇÃO, RESULTADOS E PROMPTS
+===============================================================================
+
+A aba “Criação” mostra o Cadastro atual e as mídias na ordem do manifesto,
+reúne as opções e o botão “Iniciar criação”, e mantém o terminal de andamento
+visível. O controle é assíncrono; progresso, mensagens e erros aparecem nesse
+terminal.
+
+O pacote _APP_/resultados/ monta a aba superior “Resultados”:
+
+    faixa 1: Sem fundo -> b_sem_fundo (largura total)
+    faixa 2: Fundo branco -> c_fundo_branco | Fundo capa -> E_fundo_capa
+    faixa 3: Medidas -> d_medidas (área ampla) | Vídeo Shopee compacto
+    faixa 4: F_pre_marketplace | G_marketplace
+
+As galerias de Sem fundo, Fundo branco, Medidas e Fundo capa compartilham cartões
+de miniatura e rolagem para coleções maiores. Os cartões de Medidas oferecem
+“Add” para copiar uma imagem a F_pre_marketplace. Sem fundo, Fundo branco e Fundo
+capa também oferecem ações por imagem para adicionar a F e preparar prompts.
+
+Vídeo tem um QVideoWidget embutido, botão para reproduzir/pausar e opção de abrir
+no reprodutor padrão. O texto de estado usa somente o nome do arquivo, não o
+caminho local completo.
+
+F_pre_marketplace permite importação manual, seleção múltipla, limpeza da
+seleção e remoção confirmada de arquivos dentro de F. Clicar numa imagem abre
+uma prévia em cache dos ajustes atuais, sem alterar o arquivo; selecionar e
+“Concluir e enviar para G” aplica os ajustes, reduz a cópia para no máximo
+2.000.000 bytes e grava diretamente em G_marketplace. Não há publicação ou
+envio externo.
+
+O fundo de capa é escolhido em “Configuração da criação” e aplicado uma vez
+em E_fundo_capa junto da sombra definida. Em F, os únicos ajustes adicionais
+são logo e texto; não se aplica outro fundo. Música, audição da faixa e volume
+também ficam em “Configuração da criação”.
+
+As funções de preparar prompt usam modelos editáveis:
+
+    Capa principal
+    Produto em uso
+    Detalhes do produto
+
+Cada modelo pode ser editado na aba Prompts, em “Prompts de imagem · usados em
+Resultados”, e é salvo separadamente dos prompts do painel de conversa. Os
+padrões usam produto, descrição e acabamento; “Produto em uso” também recebe
+Serventia para definir a cena. Somente esse modelo recebe altura, largura e
+espessura extraídas do nome final, para manter a escala da cena; elas não são
+texto para a imagem. Capa e detalhes seguem a aparência e as proporções da foto
+anexada. Peso, código interno do produto e nome do arquivo não entram nos
+modelos padrão. Configuração de venda e código de grupo não são inseridos.
+
+O diálogo de preparação mostra apenas a imagem e o texto do prompt, além dos
+botões de cópia. Logo e fundo não são anexados por esse diálogo; a logo é
+adicionada na etapa de F. O fluxo não envia arquivos à IA do aplicativo nem
+inicia integração direta com o CapCut.
+
+Após uma conclusão bem-sucedida, a janela seleciona automaticamente a aba
+superior “Resultados”. O botão “Atualizar” em “Criação” também procura
+resultados que já estejam nas pastas do produto; se um arquivo final esperado
+não existir, não há miniatura ou vídeo disponível.
+
+===============================================================================
+9. CLASSIFICAÇÃO, KITS E FORMAS DE VENDA
+===============================================================================
+
+Cadastro responde “o que é este produto?”:
+
+  - produto Único ou Kit;
+  - variações e grupos;
+  - se um produto único também pode ser vendido como kit;
+  - quantidade de peças e dados de composição.
+
+Produção responde “quais ofertas permitidas quero registrar nesta execução?”:
+
+    ÚNICO, KIT=NO  -> Peça única
+    ÚNICO, KIT=YES -> Peça única + Kit: <quantidade cadastrada>
+    KIT            -> Kit: <quantidade cadastrada>
+
+A lista na Produção é derivada do Cadastro, mostra somente opções compatíveis e
+vem marcada por padrão. A interface não permite iniciar com tudo desmarcado.
+Se a helper da pipeline for chamada sem seleção, ela volta às opções válidas.
+Seleções inválidas são rejeitadas.
+
+Atualmente, as formas selecionadas entram em formas_venda.json. Elas não
+alteram imagens, vídeo, organização de grupos nem as linhas de VENDAS. Por isso
+a seleção é metadata de produção, não um segundo cadastro de kit. Se a escolha
+passar a ser uma preferência permanente, deve ser modelada no Cadastro.
+
+===============================================================================
+10. DIFERENÇA PARA O STREAMLIT ANTIGO
+===============================================================================
+
+A antiga produção trabalhava mais por posição: lia o TXT e a lista de imagens,
+associava linhas a imagens e chamava caminhos de renomeação distintos para
+produto único, kit e único com kit. Ela alternava certos arquivos entre
+diretórios de amostra e medida. A pipeline atual preserva os nomes finais do
+Cadastro e usa manifesto/grupos; não deve chamar renomear_por_config().
+
+A antiga tela de Produção tinha Grerar_prev() para selecionar recursos e
+visualizar prévias. Na etapa posterior, mostrar_imagens_em_tabs() apresentava
+imagens de a_Sem_Fundo, Fundo_Banco, c_Amostra_SEM_LOGO e d_Medida_COM_LOGO,
+permitia marcar até três e exibia o prompt gerado por gerar_prompt_shopee().
+
+O fluxo antigo oferecia texto para capa principal, produto em uso e detalhe.
+Não fazia chamada a uma IA. O usuário levava o prompt a outra ferramenta e
+salvava três resultados em Pre_Capas; com os três presentes, o Streamlit movia
+para _Capas, removia Pre_Capas e continuava. O código desktop residual de
+pre_capas/f_capas não é chamado pela aba Resultados atual, que usa
+F_pre_marketplace/G_marketplace. Os diretórios antigos _Capas e Pre_Capas são
+somente leitura pelo fluxo atual; não são apagados ou renomeados.
+
+Falhas/limitações antigas conhecidas:
+
+  - valor inicial do quarto checkbox vinculado ao estado do terceiro;
+  - procura por nome-base/prefixo com possibilidade de colisão;
+  - parser de medida supunha que dimensões estariam no segundo campo do nome;
+    no formato atual CSE1_01_7x5x2_100.jpg, o segundo campo é “01”;
+  - importação no checkout atual aponta para _APP_/Functions_app.py, mas a
+    cópia localizada está em ANTIGA_STREAMLIT_UI/Functions_app.py.
+
+A galeria PySide6 atual implementa a parte manual de resultados e prompts; não
+repõe automaticamente os passos comerciais/marketplace do Streamlit antigo.
+
+===============================================================================
+11. REUTILIZAÇÃO, CACHE E PASTAS RESIDUAIS
+===============================================================================
+
+A pipeline reaproveita b_sem_fundo se os PNGs esperados existirem e não forem
+mais antigos que a_ajuste_geral. c_fundo_branco, d_medidas, E_fundo_capa e o
+MP4 em F_video_shopee são reaproveitados quando estão completos e as assinaturas
+das entradas e configurações correspondem. As assinaturas ficam em arquivos de
+controle `.pipeline_cache.json` dentro das pastas C, D, E e F. Se uma saída
+completa anterior ainda não tiver assinatura, ela é adotada como referência na
+primeira execução e não é refeita só por causa dessa mudança.
+
+As dependências são independentes após b_sem_fundo: mudar o fundo branco afeta
+somente c_fundo_branco; mudar fundo de medida, logo ou tipo de medida afeta
+somente d_medidas; mudar fundo de capa afeta E_fundo_capa; mudar a altura da
+sombra afeta C, D e E; mudar vídeo ou seus recursos afeta somente
+F_video_shopee. Se B precisar ser reconstruída, C, D e E também são atualizadas
+porque dependem dela. Uma pasta incompleta ou com imagens esperadas faltando
+refaz somente sua etapa e as dependentes.
+
+As assinaturas comparam caminho, tamanho e data de modificação dos arquivos,
+além das configurações usadas. Não são hashes do conteúdo: uma edição que
+preserve caminho, tamanho e data de modificação pode não ser detectada. A
+validação de b_sem_fundo também compara as datas das entradas A e saídas B.
+previews têm sua própria validação por data dos arquivos de origem e do fundo.
+A pipeline não apaga pastas legadas nem arquivos que saíram do manifesto.
+
+A estrutura persistente do fluxo de produção usa a_ajuste_geral, b_sem_fundo,
+c_fundo_branco, d_medidas, E_fundo_capa e F_video_shopee. O fluxo atual de
+marketplace usa F_pre_marketplace e G_marketplace; F guarda imagens originais
+em preparação e G guarda as cópias ajustadas e reduzidas. A exclusão seletiva
+afeta apenas os arquivos marcados que estejam dentro de F. previews é criada
+somente pelo fluxo de Recursos Visuais. Diretórios temporários de fundo e
+medidas são removidos ao terminar. Pastas legadas continuam no disco e não são
+apagadas automaticamente.
+
+===============================================================================
+12. RISCO DE DADOS: TABELA VENDAS
+===============================================================================
+
+_gravar_vendas() remove os registros anteriores cujo NOME_PRODUTO corresponda
+ao produto atual, sem diferenciar maiúsculas/minúsculas, e grava os JPGs finais
+de d_medidas. Registros de outros produtos são preservados. A etapa ocorre
+antes da conversão de vídeo; uma falha posterior no vídeo pode ocorrer depois
+da atualização das medidas do produto.
+
+A seleção em formas_venda.json não determina os registros inseridos em VENDAS.
+Também não há gravação em MARKET_PLACE nesta pipeline.
+
+===============================================================================
+13. CHECKLIST DE DIAGNÓSTICO
+===============================================================================
+
+Se a Produção não iniciar:
+
+  - conferir o último cadastro e o caminho;
+  - abrir produtos.txt e verificar uma linha por imagem;
+  - conferir .ordem_midias.json, nomes e arquivos presentes;
+  - conferir medidas/pesos no nome e no TXT;
+  - conferir a_ajuste_geral (ou nomes legados aceitos);
+  - conferir os recursos visuais e as prévias abaixo das saídas em “Resultados”;
+  - conferir a classificação de kit e opções permitidas.
+
+Se a pasta final não tiver todas as imagens:
+
+  - comparar grupos/ordem do manifesto;
+   - verificar saídas esperadas em b_sem_fundo, c_fundo_branco, d_medidas e
+     E_fundo_capa;
+  - verificar erros reportados por Remove_IMG, Trocar_fundo,
+    Colocar_medidas e Adicionar_logo_completa;
+  - confirmar se saídas antigas com os mesmos nomes fizeram uma etapa ser
+    reaproveitada.
+
+Se a galeria estiver vazia:
+
+  - verificar se há imagens em b_sem_fundo, c_fundo_branco e d_medidas;
+  - verificar se a pasta do Cadastro atual é a mesma usada na execução;
+  - usar Atualizar para reler as saídas existentes;
+  - conferir previews separadamente, pois pode haver cache antigo.
+
+Se o vídeo não aparecer:
+
+  - conferir se o manifesto contém vídeo e se o nome está presente na raiz;
+   - conferir se o destino esperado existe em F_video_shopee ou nas pastas
+     legadas e_video_shopee_convertido/Video_shopee_convertido;
+  - lembrar que somente o primeiro vídeo é tratado;
+  - conferir duração/erro do conversor e os recursos de vídeo cadastrados em
+    Configurações, além da música escolhida na Produção.
+
+Se os prompts não aparecerem:
+
+  - localizar a faixa “Sem fundo” dentro de “Resultados”;
+  - escolher o objetivo do prompt e abrir “Preparar para CapCut”;
+  - conferir os caminhos locais mostrados no diálogo e anexar manualmente os
+    arquivos desejados no CapCut; nenhum arquivo é enviado automaticamente.
+
+===============================================================================
+14. PENDÊNCIAS NÃO RESOLVIDAS NESTE DOCUMENTO
+===============================================================================
+
+  1. Avaliar um fingerprint de conteúdo/configuração para invalidar b_sem_fundo
+     e previews mesmo quando arquivos forem editados preservando suas datas.
+  2. Validar e tratar o resultado do conversor; decidir como processar múltiplos
+     vídeos.
+  3. Confirmar no Windows a apresentação da galeria, a navegação automática e
+     os prompts com arquivos reais.
+  4. Definir a integração futura se for necessário enviar imagem para IA e
+     receber arquivos gerados. A transferência atual para CapCut é manual.
+  5. Confirmar como kit completo/peças devem virar ofertas, imagens e anúncios;
+     a regra de grupo visual não resolve sozinha todos os papéis comerciais.
+  6. Comparar a estrutura antiga do computador Windows com a cópia
+     ANTIGA_STREAMLIT_UI deste checkout, em especial o import de Functions_app.
+
+===============================================================================
+15. REGRAS DE CONTINUIDADE E VERIFICAÇÃO
+===============================================================================
+
+  - Trabalhar no aplicativo desktop PySide6 existente.
+  - Não criar site, frontend web, backend, canvas ou aplicativo paralelo.
+  - Não instalar dependências nem iniciar app, pipeline, testes, builds ou
+    workflows neste ambiente.
+  - Alterar código somente quando houver pedido explícito.
+  - Preservar nomes finais e a ordem do Cadastro; não reintroduzir renomeação
+    posicional ou associação imagem/TXT.
+  - Conferir a definição ativa antes de editar arquivos com blocos históricos
+    duplicados.
+  - Não apagar pastas legadas já existentes; o fluxo ativo deixa de criá-las.
+  - Separar comportamento visto em código de comportamento validado no Windows.
+
+Nesta atualização o código da pipeline e da interface, junto dos documentos
+de Cadastro e Produção, foi alinhado ao fluxo A/B/C/D. A pipeline não foi
+executada e a tela não foi aberta visualmente; isso não substitui teste
+integrado no computador Windows de destino.
+
+FIM DO DOCUMENTO

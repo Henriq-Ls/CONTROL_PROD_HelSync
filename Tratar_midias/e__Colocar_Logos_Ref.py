@@ -4,6 +4,7 @@
 # ==========================================================
 
 import os
+from typing import Callable
 
 from PIL import (
     Image,
@@ -36,7 +37,15 @@ def carregar_fonte(tamanho):
     return ImageFont.load_default()
 
 # ⚠️  função grande (74 linhas) | except genérico vazio
-def Adicionar_logo_completa(pasta_entrada, pasta_saida, caminho_logo=None, texto_site=None, nome_produto=None, adicionar_referencia=None):
+def Adicionar_logo_completa(
+    pasta_entrada,
+    pasta_saida,
+    caminho_logo=None,
+    texto_site=None,
+    nome_produto=None,
+    adicionar_referencia=None,
+    progress: Callable[[str], None] | None = None,
+):
     os.makedirs(pasta_saida, exist_ok=True)
 
     extensoes = (".jpg", ".jpeg", ".png", ".webp")
@@ -48,7 +57,17 @@ def Adicionar_logo_completa(pasta_entrada, pasta_saida, caminho_logo=None, texto
         except:
             logo_base = None
 
-    for arquivo in os.listdir(pasta_entrada):
+    arquivos = [
+        arquivo
+        for arquivo in sorted(os.listdir(pasta_entrada))
+        if arquivo.lower().endswith(extensoes)
+    ]
+    if progress:
+        progress(f"Pasta pronta: {pasta_saida}")
+        progress(f"Adicionando logo em {len(arquivos)} imagem(ns)...")
+
+    processados = 0
+    for arquivo in arquivos:
         if not arquivo.lower().endswith(extensoes):
             continue
 
@@ -105,8 +124,15 @@ def Adicionar_logo_completa(pasta_entrada, pasta_saida, caminho_logo=None, texto
             destino = os.path.join(pasta_saida, nome_saida)
             img.save(destino, quality=95)
             print(f"Salvo: {destino}")
+            processados += 1
+            if progress:
+                progress(f"Logo {processados}/{len(arquivos)}: {os.path.basename(destino)}")
 
         except Exception as e:
             print(f"Erro em {arquivo}: {e}")
+            if progress:
+                progress(f"Erro na logo de {arquivo}: {e}")
 
     print(f"FINALIZADO → {pasta_saida}")
+    if progress:
+        progress(f"Pasta concluída: {pasta_saida}")

@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from typing import Callable
 
 from PIL import Image, ImageFilter, ImageEnhance
 GERAR_SOMBRA    = True
@@ -46,7 +47,13 @@ def compor(produto, fundo_path, sombra_altura, centralizar=False):
     return tela
 
 # ⚠️  except genérico vazio
-def Trocar_fundo(pasta_imagens, pasta_saida,imagem_fundo, sombra_altura=0.2):
+def Trocar_fundo(
+    pasta_imagens,
+    pasta_saida,
+    imagem_fundo,
+    sombra_altura=0.2,
+    progress: Callable[[str], None] | None = None,
+):
     pasta_imagens = Path(pasta_imagens)
     imagem_fundo = Path(imagem_fundo)
 
@@ -55,7 +62,17 @@ def Trocar_fundo(pasta_imagens, pasta_saida,imagem_fundo, sombra_altura=0.2):
 
     extensoes = (".jpg", ".jpeg", ".png", ".webp")
 
-    for arquivo in sorted(os.listdir(pasta_imagens)):
+    arquivos = [
+        arquivo
+        for arquivo in sorted(os.listdir(pasta_imagens))
+        if arquivo.lower().endswith(extensoes)
+    ]
+    if progress:
+        progress(f"Pasta pronta: {pasta_saida}")
+        progress(f"Aplicando fundo em {len(arquivos)} imagem(ns)...")
+
+    processados = 0
+    for arquivo in arquivos:
         if not arquivo.lower().endswith(extensoes):
             continue
 
@@ -75,11 +92,18 @@ def Trocar_fundo(pasta_imagens, pasta_saida,imagem_fundo, sombra_altura=0.2):
                 resultado.save(saida)
 
             print(f"Salvo: {saida}")
+            processados += 1
+            if progress:
+                progress(f"Fundo {processados}/{len(arquivos)}: {arquivo}")
 
         except Exception as e:
             print(f"Erro em {arquivo}: {e}")
+            if progress:
+                progress(f"Erro em {arquivo}: {e}")
 
     print("\nFINALIZADO")
+    if progress:
+        progress(f"Pasta concluída: {pasta_saida}")
 
 r'''Trocar_fundo(r'C:\Users\henri\Downloads\PRODUTOS\PORTA CANETAS CARTAO\03 - Sem Fundo',
 r'C:\Users\henri\Downloads\PRODUTOS\PORTA CANETAS CARTAO\04 - Imagem Amostra',

@@ -1,6 +1,6 @@
 # 📁 _FERRAMENTAS_/Prompts.py
 
-from Functions import extrair_medidas
+from _FERRAMENTAS_.Functions import extrair_medidas
 
 def Prompt_Analisador_Produtos():
 
@@ -153,7 +153,7 @@ def Criar_Fundo_img_MOSTRA():
     return f'''Crie um fundo fotográfico profissional, ultra-realista e minimalista para destacar ao máximo o produto principal da imagem enviada, e ajustando a nova cena de fundo a imagem enviada!
 
 - Uma superfície ampla e vazia de madeira envelhecida em tom médio-claro (cinza desgastado, bege-acinzentado ou marrom claro envelhecido), com textura bem sutil: veios leves e naturais e rústico.
-- Iluminação natural suave e difusa (luz de janela ampla ou dia nublado), sombras mínimas e orgânicas que realçam apenas o produto sem criar drama excessivo.
+- Iluminação natural suave e difusa (Imagem de referência para anexar:luz de janela ampla ou dia nublado), sombras mínimas e orgânicas que realçam apenas o produto sem criar drama excessivo.
 - Fundo neutro e levemente desfocado: parede lisa em tom claro branco envelhecido rústico, sem elementos chamativos ou decorativos. Atmosfera rústica clean e minimalista, estilo estúdio brasileiro simples para venda online.
 
 Composição horizontal 1:1, alta resolução 4K, estilo foto de produto para e-commerce, espaço central generoso e limpo para posicionar mercadorias. NENHUM objeto extra, sem pessoas, sem logos, sem distrações visíveis. O produto da imagem original deve ser o elemento mais destacado, mais texturizado e mais escuro/contrastado da composição inteira — o fundo precisa ficar visivelmente mais claro, discreto e sem competir pela atenção.

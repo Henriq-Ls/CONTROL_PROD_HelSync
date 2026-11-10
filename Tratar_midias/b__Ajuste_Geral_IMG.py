@@ -39,7 +39,12 @@ def aprimorar_produto(produto: Image.Image, madeira_crua: bool = False) -> Image
     return Image.merge("RGBA", (r2, g2, b2, alpha))
 
 # ⚠️  função grande (60 linhas) | except genérico vazio
-def Ajuste_IMG(pasta_entrada, pasta_saida, madeira_crua=False):
+def Ajuste_IMG(
+    pasta_entrada,
+    pasta_saida,
+    madeira_crua=False,
+    salvar_png=False,
+):
     """Aplica os ajustes de cor e nitidez nas imagens.
 
     Parâmetros:
@@ -83,7 +88,12 @@ def Ajuste_IMG(pasta_entrada, pasta_saida, madeira_crua=False):
             else:
                 tem_transparencia = False
 
-            if tem_transparencia:
+            if salvar_png:
+                img_final = img_final.convert(
+                    "RGBA" if tem_transparencia else "RGB"
+                )
+                saida = pasta_saida / f"{Path(arquivo).stem}.png"
+            elif tem_transparencia:
                 img_final = img_final.convert("RGBA")
                 saida = saida.with_suffix(".png")
             else:

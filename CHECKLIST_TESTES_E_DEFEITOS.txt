@@ -1,0 +1,413 @@
+HEN PLACE CONTROL — TESTES, DEFEITOS E AJUSTES PENDENTES
+Atualizado em: 2026-10-14
+
+LEGENDA
+[ ] Pendente: testar, confirmar ou corrigir em etapa futura.
+[x] Registrado/concluído conforme indicado. Uma alteração de código marcada [x]
+    não significa que foi validada no computador desktop.
+
+REGRA DE ESCOPO
+Este arquivo organiza os testes e defeitos por aba do aplicativo.
+Não fazer novas correções no código até o usuário pedir explicitamente.
+As alterações de código feitas antes desta orientação permanecem como estão;
+não as reverter. Ainda precisam de validação no computador desktop.
+
+ÍNDICE POR ABA
+1. Cadastro
+2. Criação
+3. Resultados
+4. Anúncio
+5. Vendas
+6. Sociais
+7. Registros
+8. Prompts
+9. Configurações
+10. Painel de IA e comportamento compartilhado
+11. Observações gerais e estado da revisão
+
+
+1. ABA CADASTRO
+
+1.1 IA ACRESCENTA FATOS
+
+RELATO
+- O produto é um chaveiro, suporte para celular e abridor.
+- O abridor serve para garrafas; não abre latas.
+- O material é cedro rosa. O usuário não informou aroma ou cheiro.
+- A IA acrescentou usos, características e texto promocional que não estavam
+  confirmados, incluindo latas, aroma, presente e outros detalhes.
+- Há divergência de peso no cadastro: aproximadamente 20 g na descrição e 25 g
+  no campo de medidas. O usuário ainda não confirmou qual valor é correto.
+
+PENDÊNCIAS
+[ ] Testar se a IA usa somente os fatos confirmados: abridor de garrafas, cedro
+    rosa e sem aroma informado.
+[ ] Testar se a IA aponta a divergência 20 g/25 g e não escolhe um valor até o
+    usuário esclarecer.
+[ ] Revisar qualquer afirmação nova que não esteja no cadastro nem tenha sido
+    informada pelo usuário.
+
+1.2 DEMORA PARA CADASTRAR OS CÓDIGOS
+
+RELATO DO USUÁRIO — 13/10/2026
+- O usuário relata que levou cerca de dois minutos somente para cadastrar os
+  códigos na aba Cadastro.
+- Este é um relato de duração; não foi anexado nesta ocorrência um log com os
+  horários de início e fim dessa operação.
+
+PENDÊNCIAS
+[ ] Registrar qual botão/ação inicia o cadastro dos códigos e anexar o trecho
+    correspondente do log, com horários de início e término.
+[ ] No desktop, repetir a operação e confirmar se a demora de aproximadamente
+    dois minutos se reproduz.
+
+1.3 PROCESSAR CADASTRO — FEEDBACK VISUAL E TEMPO
+
+RELATO E LOG ANTERIOR
+- Ao clicar em Processar cadastro, o usuário não viu indicação imediata de que
+  a tarefa tinha começado; o overlay apareceu só depois de uma longa espera.
+- O usuário pediu que o overlay animado de _ULTILIDADES_/loading_overlay.py
+  apareça desde o início do processamento.
+- No histórico anexado, o worker começa às 15:51:41.383, inicia a geração das
+  imagens PNG às 15:51:43.182 e conclui às 15:52:24.128 (cerca de 43 segundos).
+  O log não informa quando o overlay foi mostrado.
+
+PENDÊNCIAS
+[ ] Exibir o overlay animado imediatamente ao clicar em Processar cadastro,
+    antes de iniciar ou aguardar o trabalho em segundo plano.
+[ ] Mantê-lo visível durante a cópia de mídias e a geração de PNGs; encerrá-lo
+    ao concluir ou ao apresentar uma falha.
+[ ] No desktop, confirmar que a animação aparece sem atraso perceptível e que há
+    retorno claro de sucesso ou erro.
+[ ] Comparar o relato atual de cerca de dois minutos com o log anterior de
+    aproximadamente 43 segundos; são medições de ocorrências diferentes.
+
+ANDAMENTO REGISTRADO
+[x] O usuário confirmou que o Cadastro foi concluído e o produto foi salvo.
+
+1.4 MEDIDAS AVULSAS — IMAGEM E VÍDEO
+
+RELATO E LOGS — 08–09/11/2026
+- O vídeo avulso foi convertido normalmente e salvo em
+  F_video_shopee dentro da pasta do produto.
+- O tratamento de imagem ajustou e removeu o fundo com sucesso; a etapa de
+  medidas falhou com erro ONNX Runtime/CUDA “out of memory”.
+- O log registra falha ao carregar TensorRT, fallback para CUDA/CPU e, depois,
+  falta de memória na GPU durante a detecção de limites para desenhar as medidas.
+- O usuário prefere que os resultados avulsos de imagem e vídeo fiquem separados
+  em H_Arq_avulsas dentro da pasta selecionada.
+
+CORREÇÕES IMPLEMENTADAS — AINDA SEM VALIDAÇÃO NO DESKTOP
+[x] Resultados avulsos de imagem passam a ficar em
+    H_Arq_avulsas/b_sem_fundo, H_Arq_avulsas/c_fundo_branco e
+    H_Arq_avulsas/d_medidas; vídeos ficam em H_Arq_avulsas/F_video_shopee.
+[x] Para PNGs com transparência, a etapa de medidas usa o canal alfa produzido
+    pela remoção de fundo em vez de executar outra inferência ONNX.
+[x] Para imagens sem transparência, a detecção reutiliza a sessão já carregada
+    e tenta novamente na CPU se a inferência compartilhada falhar por falta de
+    memória da GPU.
+[x] A aba Medidas avulsas e sua documentação agora indicam H_Arq_avulsas como
+    raiz das saídas.
+
+PENDÊNCIAS
+[ ] No Windows, repetir o processamento da imagem do relato e confirmar a geração
+    de b_sem_fundo, c_fundo_branco e d_medidas dentro de H_Arq_avulsas.
+[ ] Testar uma imagem opaca com fundo de medidas selecionado, confirmando o
+    fallback para CPU quando a GPU não tiver memória disponível.
+[ ] Converter vídeo e confirmar que ele também fica em
+    H_Arq_avulsas/F_video_shopee, sem alterar os originais nem as pastas padrão
+    da Criação.
+
+
+2. ABA CRIAÇÃO
+
+2.1 PRIMEIRA EXECUÇÃO — 12/10/2026, 14:37–16:06
+
+[x] O Cadastro criou produtos.txt, copiou as mídias e concluiu a geração de
+    a_ajuste_geral; o worker terminou sem erro registrado.
+[x] A Produção leu o manifesto com 5 imagens e 1 vídeo, validou 1 grupo e
+    calculou 4 amostras/variações e 1 imagem de medida.
+[x] A pipeline registrou conclusão de b_sem_fundo (5 imagens), c_fundo_branco
+    (5 imagens), d_medidas (1 imagem) e E_fundo_capa (5 imagens).
+[x] O vídeo foi convertido para F_video_shopee/video_cas.mp4 e a Produção foi
+    concluída às 16:06:13; o worker encerrou e foi removido às 16:06:33.
+- Tempo total da Produção: aproximadamente 10 min 48 s (15:55:25–16:06:13).
+- A primeira carga do modelo de remoção de fundo levou aproximadamente 3 min
+  4 s; a primeira imagem levou 42,8 s e as seguintes cerca de 1,2–1,5 s.
+- A conversão do vídeo começou às 15:59:56 e terminou às 16:06:13
+  (aproximadamente 6 min 17 s). O usuário considerou excessivo o tempo total de
+  criação do vídeo e tratamento das imagens.
+
+2.2 NOVA EXECUÇÃO — SUPORTE CEL PREGO
+
+RELATO E LOGS — 13/10/2026, aproximadamente 23:35–23:51
+- A pipeline preparou as pastas E_fundo_capa e F_video_shopee às 23:35.
+- O carregamento do módulo/modelo começou às 23:35:15.751. A pasta
+  b_sem_fundo só apareceu às 23:48:00.086, quando a inicialização terminou:
+  cerca de 12 min e 44 s antes de começar o processamento das imagens.
+- O console informou “Carregando ONNX na GPU...”; isso confirma o caminho de
+  GPU, mas os registros não distinguem download dos pesos de inicialização
+  da sessão CUDA.
+- As seis imagens de remoção de fundo terminaram em 178,64 s (2 min e 59 s),
+  média de 29,773 s por imagem.
+- O console mostrou aviso PyTorch/NumPy de array somente para leitura em
+  c__Remove_Refina_IMG.py:65. As seis imagens foram salvas; o aviso não abortou
+  a etapa.
+- Na etapa de medidas, o ONNX Runtime não carregou
+  onnxruntime_providers_tensorrt.dll (erro 126), fez fallback para CUDA/CPU e a
+  imagem de medidas foi salva. Falha recuperada, mas o fallback pode acrescentar
+  trabalho nessa etapa.
+- A captura termina após o resultado de medidas; não contém confirmação de
+  “Vídeo convertido” ou “Produção concluída”.
+- O usuário observou que as pastas E/F foram preparadas antes de B. No código,
+  B só é criada depois da inicialização do modelo; por isso não apareceu durante
+  os 12 min e 44 s de espera.
+
+ANOMALIA A CONFERIR
+- O console anexado também contém uma leitura FFmpeg de
+  CHAVEIRO ABRIDOR SUPORTE/F_video_shopee/video_cas.mp4, embora o processamento
+  de imagens mostrado seja de SUPORTE CEL PREGO.
+- Essas linhas FFmpeg não têm horário e podem ser saída antiga de outra
+  conversão. O fluxo atual resolve o nome do vídeo a partir do manifesto do
+  produto selecionado; não está confirmado que esse caminho pertença à execução
+  atual.
+
+PENDÊNCIAS
+[ ] Medir separadamente importação, obtenção dos pesos e criação da sessão ONNX
+    para explicar a espera de cerca de 12 min e 44 s.
+[ ] Verificar o cache do modelo e confirmar se a primeira espera foi download ou
+    inicialização da GPU; não há prova suficiente no trecho anexado.
+[ ] Investigar a tentativa de carregar TensorRT (erro 126) na etapa de medidas
+    e avaliar a seleção explícita de provedores CUDA/CPU.
+[ ] Corrigir ou avaliar o aviso do array NumPy somente para leitura na conversão
+    para tensor; confirmar que o resultado visual não é afetado.
+[ ] Confirmar se a entrada FFmpeg de CHAVEIRO ABRIDOR SUPORTE é saída antiga ou
+    se o vídeo errado foi associado à execução de SUPORTE CEL PREGO.
+[ ] Obter o trecho final com “Vídeo convertido” e “Produção concluída” e medir o
+    tempo total desta nova execução.
+[ ] Revisar a demora da Criação, especialmente a conversão de vídeo (~6 min
+    17 s na primeira execução) e o tempo total da pipeline (~10 min 48 s).
+
+
+3. ABA RESULTADOS
+
+ESTADO REGISTRADO — 12/10/2026
+- O usuário já havia passado pela Criação e estava montando os frames.
+- Fundo branco, Fundo capa e Medidas exibiam imagens geradas; o vídeo Shopee
+  aparecia como pronto. F Pré-marketplace e G Marketplace pronto estavam vazios
+  enquanto os frames eram montados. Registro histórico, não defeito confirmado.
+
+AJUSTES DA INTERFACE IMPLEMENTADOS — 14/10/2026
+[x] Adicionado seletor para alternar entre as pastas de imagens da aba
+    Resultados; a galeria exibe a pasta escolhida com os botões de ação.
+[x] Adicionado editor visual para os três prompts de imagem (capa, produto em
+    uso e detalhes), com salvamento integrado ao AppData pelo mecanismo usado
+    pelos prompts do aplicativo.
+[x] Reorganizados a área do vídeo, F Pré-marketplace e G Marketplace pronto
+    junto à galeria para harmonizar a tela.
+[x] A galeria foi ajustada para separar os cartões e botões, quebrar imagens em
+    linhas e rolar verticalmente, sem rolagem horizontal.
+[x] Removida a altura fixa da galeria e configurados painel, seletor e lista
+    para expandirem juntos; a área rolável deve ocupar o espaço disponível.
+
+COPIAR CAMINHO DA IMAGEM PARA FERRAMENTA EXTERNA
+- Em Ações > preparar prompt para ferramenta de imagem, o diálogo “Preparar capa
+  principal” mostra o caminho completo da imagem.
+- O botão “Copiar caminho da imagem” deve copiar somente a pasta que contém a
+  imagem, sem o nome do arquivo .png. O usuário relata que colar o caminho
+  completo no site abre a imagem no navegador em vez de facilitar o envio.
+
+TESTE DO PROMPT DE CAPA PRINCIPAL
+- O usuário usou o prompt gerado pelo projeto com a foto de referência
+  CAS1_01_7x4x2_25.png (foto do produto, não a logo opcional).
+- A ferramenta externa distorceu significativamente o produto e não preservou
+  sua forma e proporções, apesar de o prompt solicitar fidelidade. O usuário
+  rejeitou o resultado.
+- Ainda não foi investigado se a causa está no prompt, na referência ou na
+  ferramenta externa.
+
+PENDÊNCIAS
+[ ] Validar no desktop o seletor e os botões das galerias, a edição e persistência
+    dos três prompts, o preenchimento/rolagem vertical da galeria e a disposição
+    das áreas de vídeo, F Pré-marketplace e G Marketplace pronto. Registrar
+    qualquer comportamento inesperado.
+[ ] Ajustar “Copiar caminho da imagem” para copiar apenas a pasta, sem nome ou
+    extensão do arquivo; confirmar o conteúdo copiado.
+[ ] Investigar a distorção do produto na ferramenta externa e como preservar
+    melhor geometria e proporções.
+
+
+4. ABA ANÚNCIO
+
+SEM DEFEITOS ESPECÍFICOS REGISTRADOS NESTE CHECKLIST.
+
+
+5. ABA VENDAS
+
+RELATO DO USUÁRIO — 13/10/2026
+- O usuário relata que a demora/problema mencionado no Cadastro também está
+  ocorrendo na aba Vendas.
+- A ação específica afetada e o tempo dessa ocorrência ainda não foram
+  detalhados; não associar este relato à demora da Criação sem confirmação.
+
+PENDÊNCIAS
+[ ] Registrar qual ação na aba Vendas ficou lenta, o tempo observado e o trecho
+    correspondente do log.
+[ ] Repetir o teste no desktop e comparar o tempo com o relato de cerca de dois
+    minutos no Cadastro.
+
+
+6. ABA SOCIAIS
+
+SEM DEFEITOS ESPECÍFICOS REGISTRADOS NESTE CHECKLIST.
+
+
+7. ABA REGISTROS
+
+SEM DEFEITOS ESPECÍFICOS REGISTRADOS NESTE CHECKLIST.
+
+
+8. ABA PROMPTS
+
+INSPEÇÃO ESTÁTICA REGISTRADA
+[x] A aba Prompts carrega cartões a partir do catálogo.
+[x] O código foi alterado para acrescentar escopos padrão ausentes sem
+    substituir prompts personalizados salvos no AppData.
+[x] O AppData do computador do usuário não está acessível nesta revisão; não foi
+    possível verificar quais prompts personalizados estão salvos nele.
+
+PENDÊNCIAS
+[ ] Testar a aba Prompts no desktop e confirmar a preservação dos prompts
+    personalizados.
+
+
+9. ABA CONFIGURAÇÕES
+
+SEM DEFEITOS ESPECÍFICOS REGISTRADOS NESTE CHECKLIST.
+
+
+10. PAINEL DE IA E COMPORTAMENTO COMPARTILHADO ENTRE ABAS
+
+10.1 ENTRADA DE VOZ
+
+RELATO
+- A gravação parava e transcrevia sem o usuário clicar para parar.
+- Ocorreu no chat e nos campos Descrição e Como pode ser usado do Cadastro.
+- A inspeção encontrou encerramento automático após silêncio e limite local
+  fixo de 120 segundos no gravador compartilhado.
+
+PENDÊNCIAS
+[ ] No desktop, deixar uma pausa longa sem apertar Parar e confirmar que a
+    gravação continua.
+[ ] Clicar em Parar e confirmar que a transcrição entra no chat.
+[ ] Repetir o teste nos campos Descrição e Como pode ser usado.
+[ ] Testar gravação acima de dois minutos. O serviço de transcrição pode ter
+    limites próprios de duração.
+
+10.2 FORMATAÇÃO DAS RESPOSTAS E TEXTO PARA COPIAR
+
+RELATO
+- A resposta tinha preâmbulo, pedido de desculpas e tratamento informal, além
+  de títulos Markdown, asteriscos, divisores, listas e quebras de linha.
+- O usuário quer respostas diretas e texto copiável para os campos sem essa
+  formatação.
+
+PENDÊNCIAS
+[ ] Pedir texto para um único campo e conferir que a resposta é direta, sem
+    preâmbulo, enfeites ou fatos promocionais não confirmados.
+[ ] Usar Copiar e conferir que a colagem fica em uma linha, sem marcadores
+    Markdown, listas ou divisores.
+[ ] Confirmar o conteúdo salvo no Cadastro/banco; persistência não foi testada
+    nesta revisão.
+
+10.3 RESPOSTAS INVÁLIDAS OU VAZIAS
+
+OUTRAS OCORRÊNCIAS NO HISTÓRICO ANEXADO
+- Ao perguntar se deveria vender o produto avulso ou em kits, a resposta exibiu
+  “User Safety: safe Response Safety: safe” no lugar de uma orientação.
+- Ao pedir a reescrita da descrição e da serventia, a interface respondeu
+  “A IA não retornou texto em uma chamada de ferramenta”. O log registra uma
+  solicitação de 56,8 segundos, resposta do provedor com zero caracteres e
+  nenhuma ferramenta executada.
+
+PENDÊNCIAS
+[ ] Investigar por que o texto “User Safety: safe Response Safety: safe” chegou
+    à conversa visível.
+[ ] Investigar a resposta vazia e definir erro claro ou repetição quando o
+    provedor não devolver texto utilizável.
+
+10.4 CONTEXTO E ESCOPO DOS PROMPTS
+
+INSPEÇÃO ESTÁTICA REGISTRADA
+[x] Os nomes de escopo correspondem às abas: Cadastro → Cadastro;
+    Criação/Resultados → Producao; Anúncio → Anuncio; Vendas → Vendas;
+    Sociais → Sociais; Registros → Registros; Prompts → Prompts;
+    Configurações → Configuracoes.
+[x] A solicitação ao painel inclui o prompt do escopo ativo e o contexto da aba.
+
+PENDÊNCIAS
+[ ] Testar conversas comuns e gerações em todas as abas: Cadastro,
+    Criação/Resultados, Anúncio, Vendas, Sociais, Registros, Prompts e
+    Configurações.
+[ ] Confirmar que a IA não afirma ter consultado banco, estoque, imagens,
+    arquivos ou valores de configuração que não recebeu.
+[ ] Se uma resposta ficar incoerente, guardar pergunta, resposta exata, aba e
+    provedor/modelo.
+
+ALTERAÇÕES COMPARTILHADAS JÁ FEITAS E MANTIDAS
+[x] Foram adicionadas regras de fidelidade factual aos prompts obrigatórios e
+    instruções padrão por escopo. Não validadas com o provedor no desktop.
+[x] O gravador compartilhado foi alterado para não encerrar por silêncio nem
+    pelo limite local de 120 segundos. A transcrição continua após o clique em
+    Parar. Não validado no desktop.
+[x] A exibição da resposta da IA foi alterada para texto simples, com remoção de
+    marcadores Markdown comuns; Copiar normaliza a resposta para uma linha. O
+    histórico original permanece preservado. Não validado no desktop.
+[x] As sugestões iniciais do painel foram trocadas por pedidos mais objetivos.
+[x] A documentação de IA, Cadastro e status do módulo foi atualizada.
+[x] Manter essas alterações; não reverter.
+
+
+11. OBSERVAÇÕES GERAIS E ESTADO DA REVISÃO
+
+AVISOS DE LOG — IMPACTO NÃO CONFIRMADO
+- No início da sessão, após a janela principal aparecer, foi registrado
+  “Windows fatal exception: code 0x8001010d” em main.py, linha 139. O aplicativo
+  continuou registrando atividade até a conclusão da Produção.
+- O Qt registrou três avisos “QWidgetWindow(..., name="AIPanelClassWindow")
+  must be a top level window” durante o uso do Cadastro.
+- Na inicialização, foi registrado que o ícone IMAGENS/icon.ico não foi
+  encontrado. A janela principal foi exibida.
+
+PENDÊNCIAS GERAIS
+[ ] Verificar se a exceção 0x8001010d e os avisos do Qt correspondem a sintomas
+    observáveis; até agora, a sessão continuou.
+[ ] Confirmar se a ausência de IMAGENS/icon.ico é esperada ou se o ícone deveria
+    estar presente na instalação.
+[ ] Fazer as validações reais no computador desktop antes de considerar os
+    comportamentos confirmados.
+
+DOCUMENTAÇÃO E CÓDIGO PARA CONSULTA
+- nucleo/_DOC_PROJETO.txt — visão e regras gerais do projeto.
+- _APP_/_DOC_APP.txt — documentação do aplicativo desktop.
+- _APP_/cadastro/_DOC_ENTRADA_CADASTRO.txt — campos e gravação de voz do Cadastro.
+- _APP_/producao/_DOC_PRODUCAO_PIPELINE.txt — etapas e saídas da Criação.
+- _IAS_/_DOC_IAS.txt — arquitetura, abas, prompts e limites do painel de IA.
+- _IAS_/_STATUS_IAS.txt — estado conhecido e verificações pendentes.
+- _IAS_/Painel_IA_PySide6.py — montagem dos prompts, exibição e cópia do chat.
+- _IAS_/ia_contextos.py — resumos de contexto por aba.
+- _IAS_/ia_config.py — padrões globais e sugestões iniciais.
+- _FERRAMENTAS_/ia_prompt_catalogo.py — carregamento do catálogo de prompts.
+- _FERRAMENTAS_/prompts_ia/catalogo.json — instruções padrão por escopo.
+- _APP_/main_window.py — roteamento de contexto e escopo das abas.
+- _APP_/cadastro/Microfone_PySide6.py — captura e transcrição compartilhadas.
+- _APP_/cadastro/App_Cadastro_Prod_PySide6.py — botões de voz do Cadastro.
+- _APP_/cadastro/App_Cadastro_Prod_PySide6_Enhanced.py — camada ativa do Cadastro.
+- _ULTILIDADES_/loading_overlay.py — overlay citado para Processar cadastro.
+- _APP_/anuncio/Controller_Anuncio_PySide6.py — contexto de geração de Anúncio.
+- _APP_/sociais/Controller_Sociais_PySide6.py — contexto de geração de Sociais.
+
+LIMITES DA REVISÃO
+[x] Foram feitas apenas verificações estáticas de sintaxe, JSON e whitespace.
+[x] O aplicativo, os provedores, o microfone e o salvamento no banco não foram
+    executados nesta revisão.

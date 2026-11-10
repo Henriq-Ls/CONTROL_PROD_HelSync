@@ -1,0 +1,55 @@
+ABA SOCIAIS — PREPARAÇÃO MANUAL
+===============================
+
+OBJETIVO
+--------
+Preparar texto para publicações de produto em Pinterest, Instagram, Facebook,
+TikTok e YouTube Shorts. O usuário escolhe um produto concluído em
+PRODUTOS_ATIVOS, solicita uma sugestão por rede à IA do projeto, revisa o bloco,
+copia o texto e seleciona manualmente uma mídia.
+
+FLUXO
+-----
+- A lista de produtos vem somente de PRODUTOS_ATIVOS; produtos pendentes de
+  A_ENTRADA ficam na área Cadastro e não aparecem nesta aba.
+- O caminho da pasta vem de PRODUTOS_ATIVOS.DIRETORIO.
+- Cada rede tem um card próprio, um campo de texto editável, ação para gerar
+  texto com IA e ação para copiar o bloco revisado.
+- Os blocos são mantidos em memória durante a sessão, separados por produto e
+  rede; não são persistidos no banco.
+- A IA recebe fatos do produto permanente e, quando existe, o título e a
+  descrição do anúncio salvo. Imagens e vídeos não são enviados para análise.
+- Ao gerar um bloco, o texto de Anúncio é lido novamente do banco. Um rascunho
+  social já exibido não muda sozinho: gere o texto novamente após salvar uma
+  alteração em Anúncio.
+- Cada card permite selecionar uma mídia compatível existente dentro da pasta
+  do produto, pré-visualizar imagens e abrir a mídia/pasta para publicação manual.
+- YouTube Shorts aceita somente vídeo no seletor; os outros cards aceitam imagem
+  ou vídeo.
+- O seletor inicia na pasta do produto e permite navegar por subpastas existentes.
+- A escolha de mídia é apenas uma referência local; o arquivo não é copiado,
+  transformado, enviado nem publicado por esta aba.
+
+LIMITES DA PRIMEIRA VERSÃO
+--------------------------
+- Sem APIs, autenticação ou publicação automática nas redes sociais.
+- Um arquivo de mídia por rede em cada rascunho.
+- A aba não executa tratamentos de imagem ou vídeo; o usuário escolhe uma mídia
+  já existente, inclusive uma saída previamente processada.
+- Textos não são gravados em SQLite nem em arquivos.
+- Com o novo esquema, título e descrição vêm de ANUNCIOS; os campos legados em
+  MARKET_PLACE permanecem como compatibilidade. A aba Sociais não altera nem
+  persiste esses valores.
+- A geração fica sujeita à disponibilidade/configuração do painel de IA.
+
+INTEGRAÇÃO
+----------
+    _APP_/main_window.py
+        -> insere Sociais entre Vendas e Registros
+        -> associa contexto de produto ao escopo Sociais do painel de IA
+    _APP_/Marketplace/Sociais/App_Sociais_PySide6.py
+        -> entrada pública SociaisTab
+    _APP_/Marketplace/Sociais/Controller_Sociais_PySide6.py
+        -> seleção de produtos permanentes, cards por rede, mídia e rascunhos locais
+    _IAS_/Painel_IA_PySide6.py
+        -> envia pedidos vinculados a produto/rede e devolve a resposta ao card

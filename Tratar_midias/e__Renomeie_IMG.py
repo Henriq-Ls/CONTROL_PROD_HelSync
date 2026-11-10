@@ -1,4 +1,5 @@
 # 📁 Tratar_midias/e__Renomeie_IMG.py
+import json
 import os
 from pathlib import Path
 
@@ -70,6 +71,44 @@ def _ler_txt(pasta: Path) -> list:
 # 💡 ordem_opc = Literal["crescente"] ← defina os valores válidos
 def _listar_imagens(pasta: Path, ordem: str = "crescente") -> list:
     arqs = [a for a in os.listdir(pasta) if a.lower().endswith(EXTENSOES)]
+
+    # Um cadastro feito pela tela PySide6 guarda a ordem escolhida em um
+    # manifesto. A produção deve usar essa ordem antes de recorrer ao nome.
+    if not ordem.strip():
+        manifestos = (
+            pasta / ".ordem_midias.json",
+            pasta.parent / ".ordem_midias.json",
+        )
+        for manifesto in manifestos:
+            if not manifesto.exists():
+                continue
+            try:
+                nomes = json.loads(manifesto.read_text(encoding="utf-8"))
+                nomes = [str(nome) for nome in nomes]
+            except (OSError, TypeError, ValueError):
+                continue
+
+            por_stem = {
+                nome.casefold(): nome
+                for nome in arqs
+            }
+            por_stem.update(
+                {
+                    Path(nome).stem.casefold(): nome
+                    for nome in arqs
+                }
+            )
+            ordenados = []
+            usados = set()
+            for nome in nomes:
+                encontrado = por_stem.get(nome.casefold())
+                if encontrado is None:
+                    encontrado = por_stem.get(Path(nome).stem.casefold())
+                if encontrado and encontrado not in usados:
+                    ordenados.append(encontrado)
+                    usados.add(encontrado)
+            ordenados.extend(nome for nome in arqs if nome not in usados)
+            return ordenados
 
     return sorted(arqs, reverse=(ordem.lower() == "decrescente"))
 

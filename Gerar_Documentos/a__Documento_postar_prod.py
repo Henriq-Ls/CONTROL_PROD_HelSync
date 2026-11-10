@@ -2,7 +2,7 @@
 import math
 import math
 
-from Functions import extrair_medidas, escreve
+from _FERRAMENTAS_.Functions import extrair_medidas, escreve
 import pandas as pd
 import streamlit as st
 # ⚠️  função grande (74 linhas) | except genérico vazio
@@ -103,7 +103,7 @@ def organizar_para_shopee(id,nome_produto):
     (não repete itens iguais, só mostra IDs diferentes)
     """
     from _BANCOS_.Banco_Bados import ler_MARKET_PLACE_prod, contar_estoque
-    from Functions import extrair_medidas
+    from _FERRAMENTAS_.Functions import extrair_medidas
     dados = ler_MARKET_PLACE_prod(nome_produto.strip())
     if not dados:
 
@@ -250,7 +250,7 @@ def Re_Anunciar():
     import os
     from _BANCOS_.Banco_Bados import ler_MARKET_PLACE, ATUAL_MARKET_PLACE, contar_estoque
 
-    from Functions import extrair_medidas
+    from _FERRAMENTAS_.Functions import extrair_medidas
     # 1. Lê todos os produtos
     dados = ler_MARKET_PLACE()
     if not dados:

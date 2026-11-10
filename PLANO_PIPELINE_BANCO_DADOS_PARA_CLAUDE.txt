@@ -1,0 +1,835 @@
+PLANO DE DISCUSSÃO — CICLO DE VIDA DO PRODUTO E BANCO DE DADOS
+Projeto: hen-place-control
+Objetivo: documentar a arquitetura acordada, o estado atual e o checklist para
+          uma futura implementação no projeto desktop existente
+
+IMPORTANTE
+----------
+Este documento registra a necessidade do usuário, as decisões de navegação e
+uma recomendação técnica. Nesta etapa, a tarefa é somente documentar:
+NÃO alterar código, NÃO migrar o banco e NÃO apagar dados.
+Antes de alterar o projeto, confira os arquivos citados, todos os consumidores
+das tabelas e a compatibilidade com o banco já existente.
+
+
+1. O QUE O USUÁRIO QUER
+-----------------------
+O fluxo deve separar duas fases:
+
+FASE TEMPORÁRIA — produto em preparação:
+    Cadastro → Criação → Resultados/Revisar mídias → Montar anúncio
+
+FASE OPERACIONAL — anúncio concluído:
+    Anúncios → Anunciar/Publicações → Vendas → Sociais → Registros
+
+A tabela A_ENTRADA deve funcionar como uma fila de produtos que ainda estão
+passando pela preparação. Enquanto houver produto pendente, as abas de
+Criação, Resultados e Montar anúncio ficam disponíveis para esse fluxo.
+
+Quando o usuário concluir e salvar o anúncio:
+
+    1. Os dados necessários do produto, os IDs gerados, as mídias e os dados
+       comerciais precisam ser preservados na área permanente do sistema.
+    2. Só depois de confirmar que a gravação permanente deu certo, o item deve
+       sair de A_ENTRADA e da fila de trabalho.
+     3. Se não houver mais produto pendente, Criação, Resultados e Montar
+        anúncio deixam de aparecer como etapas ativas.
+     4. O produto concluído continua disponível em Anúncios, Anunciar, Vendas,
+        Sociais e Registros.
+    5. Ao cadastrar um produto novo, o fluxo temporário volta a aparecer.
+
+O ID gerado na Criação deve continuar identificando o mesmo item após a
+conclusão. O título comercial não deve substituir silenciosamente a chave
+interna que liga produto, IDs e pastas.
+
+NAVEGAÇÃO PRINCIPAL ACORDADA
+    A janela PySide6 terá uma barra vertical à esquerda, com quatro áreas e a logo:
+        1. Cadastro
+        2. Marketplace
+        3. Vendas
+        4. Configuração
+    Cada área troca o conjunto de abas horizontais e o conteúdo correspondente.
+    A barra fica no lado esquerdo da janela; não criar outro aplicativo.
+
+
+2. COMO O PROJETO FUNCIONA HOJE
+-------------------------------
+O projeto é desktop Python/PySide6. O caminho ativo do banco usado pelas telas
+PySide6 é definido em:
+
+    _APP_/PySide6_core.py
+    _BANCOS_/Base_Dados.db
+
+As telas principais usam as funções de _APP_/PySide6_core.py. O arquivo
+_BANCOS_/Banco_Bados.py contém funções antigas e é usado por módulos legados e
+algumas ferramentas; não se deve presumir que alterar apenas esse arquivo
+altere o fluxo principal da interface PySide6.
+
+As tabelas atuais têm estes papéis:
+
+A_ENTRADA
+    Cadastro-base: PRODUTO, REFERENCIA, DIRETORIO, DESCRITION, SERVENTIA,
+    ACOMPANHA, ACABAMENTO, KIT e OBS. PRODUTO é a chave primária atual.
+    A camada ativa do Cadastro também mantém campos complementares, como regras
+    de anúncio e proporção, conforme o esquema instalado.
+
+VENDAS
+    Apesar do nome, no fluxo PySide6 esta tabela é usada principalmente como
+    relação dos IDs gerados pela produção, associando ID, produto, kit e caminho
+    de mídia. Não é o histórico normal de vendas realizadas.
+
+MARKET_PLACE
+    Guarda registros de estoque/unidades por ID, dados comerciais e dados de
+    venda. Inclui NOME_PRODUTO, ID, IMAGEM, KIT, plataformas, preço, custo,
+    quantidade, TITULO e DESCRITION. O salvamento atual cria uma linha por
+    unidade de estoque.
+
+
+3. FLUXO ATIVO CONFIRMADO NO CÓDIGO
+----------------------------------
+1. Cadastro salva as informações-base em A_ENTRADA e mantém mídias/arquivos na
+   pasta do produto.
+
+2. Criação lê o cadastro-base mais recente. Resultados mostra os arquivos
+   gerados; não é a tabela de cadastro dos dados do produto.
+
+3. A pipeline ativa de produção (_APP_/producao/pipeline.py) grava os IDs
+   produzidos em VENDAS. Ela substitui os IDs anteriores daquele produto, não
+   os registros de todos os produtos.
+
+4. Anúncio recebe o produto ativo e busca seus IDs em VENDAS. Ao salvar uma
+   configuração comercial válida, grava:
+       - título e descrição por marketplace em ANUNCIOS, quando o novo esquema
+         está instalado; também mantém os campos legados em MARKET_PLACE;
+       - preço por ID e marketplace em ANUNCIO_IDS, quando migrado;
+       - custo, plataformas e unidades nos campos legados de MARKET_PLACE;
+       - plataformas, preço-base e custo também em VENDAS.
+   NOME_PRODUTO continua sendo o nome interno do cadastro; TITULO é o título
+   comercial. “Aplicar a todos os IDs” apenas copia valores para os campos; o
+   botão de salvamento é uma ação separada.
+
+5. A aba Vendas registra compradores nas unidades de MARKET_PLACE. Portanto,
+   a tabela SQL chamada VENDAS não deve ser confundida com a aba Vendas.
+
+6. Sociais lista somente produtos concluídos de PRODUTOS_ATIVOS. Ao gerar um
+   texto, usa os fatos e caminhos do cadastro permanente e os textos salvos do
+   anúncio. Produtos pendentes de A_ENTRADA não aparecem no Marketplace.
+   Rascunhos sociais gerados ficam em memória, não são persistidos.
+
+7. Registros lê VENDAS e MARKET_PLACE. No bloco de MARKET_PLACE mostra o
+   título, mas a apresentação não unifica o título comercial e o nome interno.
+
+
+4. O QUE AINDA NÃO ESTÁ VALIDADO
+--------------------------------
+As observações abaixo descrevem o comportamento que ainda precisa ser
+confirmado no desktop. O banco e o backup estão disponíveis e íntegros; o
+código contém a migração e a conclusão explícita de produto, mas a interface
+não foi executada neste ambiente.
+
+- Salvar a configuração comercial não remove A_ENTRADA por si só. A tela tem
+  uma ação explícita separada para concluir o produto; validar a sequência no
+  desktop.
+- Depois da migração, o estado é representado pela presença do produto em
+  A_ENTRADA (pendente) ou PRODUTOS_ATIVOS (concluído). Antes da migração, as
+  novas tabelas não existem e a ação de conclusão fica indisponível.
+- O código oculta Criação, Resultados e Montar anúncio quando A_ENTRADA não tem
+  pendências; confirmar o comportamento com mais de um produto e após reabrir.
+- Anúncios, Anunciar e Sociais listam somente produtos concluídos de
+  PRODUTOS_ATIVOS. A_ENTRADA segue disponível ao fluxo pendente da área Cadastro.
+  Ainda é preciso validar essa separação no desktop e conferir módulos legados.
+- VENDAS ainda é consultada para IDs de produção e MARKET_PLACE continua sendo
+  usada para unidades, estoque e dados de vendas reais. Não apagar nem renomear
+  essas tabelas.
+- MARKET_PLACE não contém todos os fatos do cadastro-base. O esquema novo
+  preserva esses campos em PRODUTOS_ATIVOS, mas a cópia e a leitura ainda
+  precisam ser verificadas com o arquivo real e com pastas de mídia existentes.
+
+
+5. MODELO DE DADOS IMPLEMENTADO NO CÓDIGO
+-----------------------------------------
+O desenho segue a Opção B: A_ENTRADA funciona como fila temporária, e os dados
+permanentes ficam no mesmo arquivo SQLite. A migração cria as novas tabelas de
+forma aditiva, após confirmação explícita, backup verificado e checagem de
+integridade:
+
+    - A_ENTRADA: fila de produtos pendentes de Cadastro, Criação, Resultados e
+      Montar anúncio.
+    - PRODUTOS_ATIVOS: cadastro permanente com chave estável, fatos do Cadastro,
+      regras, referência, diretório e proporção.
+    - MARKETPLACES: catálogo configurável; sites podem ser desativados sem
+      apagar anúncios, estoque ou histórico.
+    - ANUNCIOS: título e descrição do produto por marketplace.
+    - ANUNCIO_IDS: associação de anúncio a ID de produção e preço por ID/canal.
+    - VENDAS: ainda é a origem dos IDs de produção no fluxo atual; apesar do
+      nome, não é o histórico normal das vendas realizadas.
+    - MARKET_PLACE: mantém unidades físicas e campos legados de estoque e
+      venda. O estoque não deve ser duplicado só porque há vários anúncios.
+
+O salvamento dos dados comerciais e a ação posterior de concluir o produto são
+transações distintas. A conclusão copia os fatos para PRODUTOS_ATIVOS, verifica
+a cópia e só então apaga a entrada correspondente. A consistência do fluxo
+completo em caso de falha entre essas ações ainda precisa ser validada.
+
+
+6. REGRAS IMPORTANTES PARA A MIGRAÇÃO
+-------------------------------------
+- Não apagar a entrada antes de confirmar a gravação permanente.
+- Se a cópia falhar, manter a entrada e informar o erro; não deixar produto
+  parcialmente migrado.
+- Preservar o ID do item de produção e uma chave estável do produto.
+- Não usar o título de marketplace como chave interna: o título pode mudar.
+- Preservar o caminho da pasta e a referência às imagens/vídeos. Não é
+  necessário duplicar os arquivos de mídia se as pastas existentes forem
+  mantidas.
+- Alterar todos os leitores antes de limpar as tabelas antigas: Anúncio,
+  Vendas, Sociais, Registros, impressão/etiquetas e qualquer consulta de IDs.
+- Tratar A_ENTRADA como fila por produto. Se houver vários produtos pendentes,
+  finalizar um não deve ocultar o fluxo enquanto outros ainda estiverem
+  pendentes.
+- O produto concluído deve continuar pesquisável e selecionável nas telas
+  posteriores após fechar e reabrir o programa.
+
+
+7. VISIBILIDADE DAS ABAS
+------------------------
+Comportamento implementado no código; validação no desktop ainda pendente:
+
+- Manter à esquerda uma barra vertical com Cadastro, Marketplace, Vendas e
+  Configuração,
+  acompanhada da logo do produto.
+- Ao entrar em uma área, trocar as abas horizontais superiores e o conteúdo
+  correspondente sem recriar as telas nem perder indevidamente a seleção.
+- Cadastro é sempre acessível. A área Cadastro contém Cadastro, Criação,
+  Resultados/Revisar mídias, Montar anúncio e Medidas avulsas.
+- A_ENTRADA pertence à área vertical Cadastro. Ela alimenta o fluxo pendente
+  até Montar anúncio, mas deixa de ser fonte para Marketplace após a conclusão.
+- Medidas avulsas deixa de ser subaba do formulário de Cadastro e passa a ser
+  uma aba independente dentro da área Cadastro.
+- Com pelo menos um produto pendente, mostrar Criação, Resultados/Revisar mídias
+  e Montar anúncio. Medidas avulsas continua acessível sem pendências.
+- Depois de concluir o último produto pendente, ocultar somente Criação,
+  Resultados/Revisar mídias e Montar anúncio. Cadastro e Medidas avulsas
+  permanecem disponíveis.
+- Ao salvar um novo cadastro, voltar a mostrar as etapas pendentes.
+- Marketplace permanece acessível e contém Anúncios, Anunciar, Sociais e
+  Registros.
+- Vendas é uma área vertical própria com as abas Registrar vendas e Histórico.
+- Configuração permanece acessível e contém Configurações, Prompts e Banco de
+  dados; futuras opções poderão ser adicionadas ali.
+- A barra vertical pode exibir ícones e a logo. Os rótulos acessíveis devem
+  continuar disponíveis mesmo que a barra seja estreita.
+- Não confundir “aba oculta” com “produto apagado”: os produtos concluídos
+  continuam acessíveis nas telas operacionais. Avaliar também uma forma de
+  reabrir/corrigir um anúncio concluído sem recriar o cadastro.
+
+
+8. NOMES MOSTRADOS NAS TELAS
+----------------------------
+Manter separados:
+    - chave/nome interno: identifica o produto para links, IDs e pastas;
+    - título comercial: texto aprovado na aba Anúncio.
+
+Nas telas operacionais, mostrar o título comercial como nome principal quando
+existir, com nome interno, referência e ID como identificação secundária.
+Sociais deve continuar recebendo os fatos do produto e o título/descrição
+salvos, mas o seletor também deveria deixar claro qual anúncio corresponde ao
+produto selecionado.
+
+DECISÕES E RECOMENDAÇÕES:
+    - O usuário confirmou que o preço pode variar por marketplace.
+    - O usuário quer selecionar marketplaces e poder adicionar ou desativar
+      opções; não limitar a interface a uma lista fixa de sites.
+    - Recomenda-se permitir título e descrição próprios por marketplace,
+      além do preço próprio. Um texto-base compartilhado pode iniciar cada
+      anúncio, mas as alterações finais por site devem ser preservadas.
+    - Desativar um marketplace não deve apagar produto, estoque ou histórico.
+    - Estoque físico e custo não devem ser multiplicados por haver anúncios em
+      vários sites.
+
+
+9. LENTIDÃO AO ABRIR ANÚNCIO
+----------------------------
+Há um gargalo provável no fluxo atual:
+
+- Ao selecionar Anúncio, _APP_/main_window.py chama creation_tab.refresh().
+- Criação recarrega recursos e a galeria de Resultados e emite um sinal que
+  recarrega Anúncio novamente.
+- Anúncio examina os arquivos da pasta G, testa e decodifica imagens na thread
+  da interface.
+- O carregamento comercial consulta os IDs repetidamente e faz consultas por
+  ID.
+
+Recomendação para a reformulação:
+    - não recarregar toda Criação/Resultados somente para abrir Anúncio;
+    - carregar uma vez o produto e seus dados comerciais;
+    - adiar a leitura das miniaturas até o usuário abrir a galeria;
+    - evitar decodificar todas as imagens na thread principal;
+    - otimizar a consulta para buscar os registros em lote;
+    - medir o tempo no desktop de destino após a mudança.
+
+Esse gargalo foi identificado por leitura estática; não foi medido porque esta
+IDE não deve executar o aplicativo.
+
+
+10. PEDIDO À CLAUDE
+-------------------
+Quando o usuário pedir para continuar, confira o código atual e avance do que
+está pendente. A migração do esquema e a navegação por áreas já existem no
+código; não as reimplemente sem encontrar uma lacuna concreta.
+
+1. Confirme a janela principal PySide6 ativa e a cadeia de imports/chamadas.
+2. Confira os leitores/escritores atuais de A_ENTRADA, VENDAS, MARKET_PLACE,
+   PRODUTOS_ATIVOS, ANUNCIOS e ANUNCIO_IDS.
+3. Compare o modelo de dados implementado com o banco real e identifique apenas
+   as lacunas de esquema, transição e compatibilidade que ainda existirem.
+4. Verifique a navegação existente e corrija somente discrepâncias confirmadas.
+5. Siga as caixas de seleção em ordem; não apague dados nem migre o banco sem
+   cópia de segurança e confirmação explícita.
+6. Respeite as instruções do projeto: nesta IDE não executar o app, testes que
+   iniciem o app, workflows, builds ou instalação de dependências.
+
+Arquivos de partida:
+    _APP_/_DOC_APP.txt
+    _APP_/Marketplace/Anuncios/_DOC_ANUNCIO.txt
+    _APP_/Vendas/Vendas/_DOC_VENDAS.txt
+    _APP_/Marketplace/Sociais/_DOC_SOCIAIS.txt
+    _APP_/main_window.py
+    _APP_/PySide6_core.py
+    _APP_/producao/pipeline.py
+    _APP_/Marketplace/Anuncios/Controller_Anuncio_PySide6.py
+    _APP_/Marketplace/Anuncios/Anunciar_PySide6.py
+    _APP_/Marketplace/Anuncios/Controller_Vendas_PySide6.py
+    _APP_/Vendas/Vendas/App_Vendas_PySide6.py
+    _APP_/Marketplace/Sociais/Controller_Sociais_PySide6.py
+    _APP_/product_lifecycle.py
+    _APP_/Configuracao/Banco_Dados/banco_dados.py
+    _APP_/App_Janela_PySide6.py (há definições históricas repetidas;
+    confirmar qual classe fica ativa)
+
+
+11. ESTRUTURA DA NAVEGAÇÃO E NOMES
+----------------------------------
+O usuário quer reorganizar a navegação existente do desktop PySide6, sem criar
+outro app. A janela principal terá uma barra vertical estreita à esquerda, com a
+logo do produto e quatro áreas principais:
+
+    1. Cadastro
+    2. Marketplace
+    3. Vendas
+    4. Configuração
+
+A logo do projeto fica na própria barra vertical à esquerda. Cada área troca as
+abas horizontais e o conteúdo mostrado à direita da barra.
+
+ÁREA CADASTRO — fluxo do produto novo:
+    Pasta da área: _APP_/Cadastro/
+    Deve agrupar os submódulos Cadastro, Criação, Resultados e Medidas avulsas.
+    - Cadastro
+    - Criação
+    - Resultados (nome sugerido: Revisar mídias)
+    - Anúncio (nome sugerido: Montar anúncio)
+    - Medidas avulsas
+
+Medidas avulsas deixa de ficar dentro do formulário de Cadastro e passa a ser
+uma aba independente dentro da área Cadastro. Cadastro e Medidas avulsas
+continuam acessíveis sem produto pendente. Criação, Resultados/Revisar mídias
+e Anúncio/Montar anúncio aparecem somente enquanto houver trabalho pendente.
+
+ÁREA MARKETPLACE — dados e operação após a conclusão:
+    Pasta da área: _APP_/Marketplace/
+    Deve agrupar Anúncios, Anunciar, Sociais e Registros.
+    - Anúncios: catálogo permanente dos anúncios salvos, editáveis por produto
+      e marketplace.
+    - Anunciar: função atual a ser inspecionada. Deve representar uma ação de
+      publicação/uso do anúncio salvo, não uma segunda cópia da mesma lista.
+      A impressão/etiquetas hoje dentro de Montar anúncio deve sair do fluxo
+      temporário e ficar aqui, conforme a proposta do usuário.
+    - Sociais.
+    - Registros.
+
+ÁREA VENDAS:
+    Pasta da área: _APP_/Vendas/
+    Subpasta: _APP_/Vendas/Vendas/
+    Deve conter duas abas:
+    - Registrar vendas: registrar a saída de unidades do estoque.
+    - Histórico: consultar vendas já registradas e dados dos compradores.
+
+    Vendas é uma área principal independente, não uma subaba de Marketplace.
+
+Antes de manter Anúncios e Anunciar como abas separadas, confirmar o papel real
+de Anunciar_PySide6.py. Se ambas apenas listarem os mesmos anúncios, evitar
+duplicação: manter Anúncios como a lista e deixar “Anunciar”, “Copiar dados”,
+“Adicionar marketplace” ou “Marcar publicado” como ações, conforme a função
+real confirmada no código.
+
+ÁREA CONFIGURAÇÃO:
+    Pasta da área: _APP_/Configuracao/
+    Deve agrupar Configurações e Prompts.
+    - Configurações
+    - Prompts
+    - Futuras opções de configuração, adicionadas somente quando solicitadas.
+
+REGRA DE PROPRIEDADE DOS DADOS
+    Neste plano, “área Cadastro” significa o espaço vertical inteiro, com as
+    subabas Cadastro, Criação, Resultados e Montar anúncio. A_ENTRADA é a fonte
+    temporária desse fluxo até a conclusão. Depois dela, Marketplace usa os
+    registros permanentes; telas operacionais não devem depender de A_ENTRADA.
+
+    Se “A_ENTRADA usada somente na aba Cadastro” significar literalmente só o
+    formulário, e não as outras subabas desse espaço, será necessário definir
+    outra fonte de staging para Criação, Resultados e Montar anúncio. A
+    recomendação é não criar um banco ou uma tabela nova por etapa: manter uma
+    fila temporária única para todo o fluxo de produção.
+
+    Mapa alvo, sujeito à auditoria do código antes de implementar:
+        - Cadastro, Criação, Resultados e Montar anúncio: dados pendentes de
+          A_ENTRADA, IDs em produção e referências a mídias.
+        - Marketplace > Anúncios: cadastro permanente do produto e tabela
+          ANUNCIOS por marketplace.
+        - Marketplace > Anunciar: dados salvos do anúncio, publicação/uso
+          manual e impressão, conforme as funções reais existentes.
+        - Vendas > Registrar vendas/Histórico: estoque compartilhado e
+          registros de vendas.
+        - Marketplace > Sociais e Registros: dados permanentes do produto,
+          IDs e anúncios; não buscar produto concluído em A_ENTRADA.
+        - Configuração: configurações e prompts; sem ser fonte do ciclo do
+          produto.
+
+    O formulário de Cadastro só deve ganhar colunas depois que a auditoria
+    identificar campos visíveis que precisam persistir. Fatos-base do produto
+    pertencem ao cadastro permanente; título, descrição e preço por site
+    pertencem a ANUNCIOS. Cada aba deve mostrar os campos de que precisa a
+    partir das tabelas certas, sem duplicar a mesma informação por unidade ou
+    marketplace.
+
+ A organização das áreas deve ficar dentro de _APP_. O usuário confirmou
+que quer agrupar as subpastas de cada área, não apenas trocar os rótulos da
+navegação. Antes de mover implementações, preservar imports legados com
+compatibilidade e evitar cópias paralelas. A janela principal ativa deve ser
+identificada por sua cadeia real de imports e chamadas; não presumir que a
+última definição textual de uma classe é automaticamente a usada.
+
+
+12. CHECKLIST PARA CONTINUAR O TRABALHO
+---------------------------------------
+DECISÕES JÁ REGISTRADAS
+    [x] Usar quatro áreas verticais à esquerda: Cadastro, Marketplace, Vendas
+        e Configuração, com a logo do produto.
+    [x] Trocar as abas horizontais conforme a área escolhida.
+    [x] Manter Cadastro sempre acessível.
+    [x] Tratar A_ENTRADA como fila temporária do Cadastro até Montar anúncio.
+    [x] Preservar os produtos concluídos em dados permanentes, sem perder IDs.
+    [x] Permitir preços diferentes e seleção configurável de marketplaces.
+    [x] Manter Medidas avulsas como aba própria dentro da área Cadastro.
+    [x] Mover impressão/etiquetas para a área Marketplace/Anunciar.
+    [x] Nesta atualização, somente documentar; não alterar código nem banco.
+
+ETAPA 1 — LEVANTAMENTO DO PROJETO (SEM ALTERAR CÓDIGO)
+    [x] Ler a documentação necessária do _APP_ e identificar a janela PySide6
+        realmente ativa.
+    [x] Rastrear imports, chamadas e consumidores de A_ENTRADA, VENDAS,
+        MARKET_PLACE e arquivos de mídia.
+    [x] Inventariar campos editáveis do Cadastro, Criação, Resultados,
+        Montar anúncio, Anunciar, Vendas, Sociais, Registros e impressão.
+    [x] Criar uma matriz campo → controle da tela → coluna/tabela → ação de
+        salvamento → telas que leem o valor; apontar campos sem persistência.
+    [x] Confirmar o comportamento da subaba Anunciar e o destino atual das
+        funções de impressão/etiquetas.
+    [x] Mapear os diretórios de _APP_ antes de propor novas pastas.
+    [x] Atualizar este plano com os achados e resolver nomes ambíguos sem
+        remover funções existentes.
+
+ETAPA 2 — MODELO DE DADOS E SALVAMENTO
+    [x] Criar em código a tabela permanente PRODUTOS_ATIVOS, com chave estável
+        e campos do Cadastro que precisam sobreviver à saída de A_ENTRADA.
+    [x] Criar em código MARKETPLACES configurável, ANUNCIOS por produto/site e
+        ANUNCIO_IDS com preço por ID e marketplace.
+    [~] Conferir as relações entre produto, IDs, variações/kits, anúncios e
+        estoque compartilhado. O esquema novo liga anúncios aos IDs de produção,
+        mas os IDs continuam originados em VENDAS e as unidades em MARKET_PLACE.
+    [~] Revisar o modelo e as colunas contra todos os campos operacionais. A
+        primeira versão do esquema está escrita; custo, estoque e vendas reais
+        continuam nas tabelas legadas.
+    [~] Confirmar a separação de IDs, estoque e vendas reais. O código ainda usa
+        VENDAS para IDs de produção e MARKET_PLACE para unidades e dados de venda.
+    [~] A gravação comercial e a conclusão do produto usam transações, mas são
+        etapas separadas. Confirmar se isso atende ao fluxo final e se os
+        registros relacionados ficam consistentes em caso de falha.
+    [x] Implementar conclusão transacional: copiar os fatos para
+        PRODUTOS_ATIVOS, verificar a gravação e só então remover de A_ENTRADA;
+        em erro, a transação deve manter a entrada.
+    [~] Direcionar Anúncios, Anunciar e Sociais a produtos permanentes, sem
+        listar pendências de A_ENTRADA. O código está ajustado; Vendas, Registros,
+        etiquetas e o fluxo completo ainda precisam de validação integrada.
+    [~] Implementar backup validado e migração aditiva. O fluxo está no código,
+        mas falta executar e verificar em uma cópia do banco real do desktop.
+
+ETAPA 3 — NAVEGAÇÃO E INTEGRAÇÃO DAS TELAS
+    [x] Implementar a barra vertical à esquerda: Cadastro / Marketplace /
+        Configuração, com a logo do produto.
+    [x] Fazer cada área exibir suas próprias abas horizontais.
+    [x] Organizar Cadastro, Criação, Resultados, Montar anúncio e Medidas
+        avulsas dentro da área Cadastro.
+    [x] Ocultar Criação, Resultados e Montar anúncio somente quando não houver
+        produto pendente; não ocultar Cadastro nem Medidas avulsas.
+    [x] Organizar Anúncios, Anunciar, Sociais, Registros e impressão na
+        área Marketplace sem duplicar funções.
+    [x] Organizar Configurações, Prompts e Banco de dados em Configuração.
+    [x] Separar Vendas do Marketplace, com Registrar vendas e Histórico.
+    [x] Preservar seleção do produto e estado necessário ao alternar áreas.
+    [x] Não mover/remover módulos históricos sem confirmar que não são usados.
+
+ETAPA 4 — VERIFICAÇÃO
+    [ ] Confirmar que os dados continuam presentes após fechar e reabrir o
+        programa no desktop do usuário.
+    [ ] Confirmar que concluir um produto não remove outros pendentes.
+    [ ] Confirmar que as telas operacionais encontram produtos depois que
+        A_ENTRADA é limpa.
+    [ ] Confirmar preços independentes por marketplace e estoque não duplicado.
+    [ ] Medir e corrigir a demora ao abrir Montar anúncio.
+    [ ] Fazer a execução final no desktop do usuário; esta IDE não deve iniciar
+        o aplicativo, workflows, builds ou testes que abram a aplicação.
+
+
+13. ESTADO DA AUDITORIA INICIAL
+--------------------------------
+Esta seção registra o estado da auditoria estática inicial, feita em 2026-11-09,
+antes da implementação do ciclo de vida do produto descrita na seção 16.
+Naquela etapa, somente a documentação foi atualizada; não houve alteração de
+código, tabelas ou dados.
+
+Na auditoria inicial, Base_Dados.db não estava presente no workspace. O arquivo
+e o backup foram adicionados depois; o estado verificado agora está na seção 16.
+
+
+14. AUDITORIA ESTÁTICA — ETAPA 1
+--------------------------------
+JANELA E IMPORTS ATIVOS
+    - main.py importa _APP_.main_window.MainWindow.
+    - _APP_/main_window.py é a janela usada; ela estende a última
+      MainWindow definida em _APP_/App_Janela_PySide6.py e reutiliza os widgets
+      existentes. As várias definições históricas desse arquivo não são a
+      entrada ativa.
+    - A pipeline ativa é _APP_/producao/pipeline.py. O Cadastro ativo é a camada
+      Enhanced, que estende as regras do núcleo compartilhado.
+    - O banco usado pelo PySide6 é _BANCOS_/Base_Dados.db, definido em
+      _APP_/PySide6_core.py. O arquivo do banco não existe nesta cópia do
+      workspace; somente o módulo legado _BANCOS_/Banco_Bados.py está presente.
+
+TABELAS E CONSUMIDORES CONFIRMADOS
+    A_ENTRADA
+        Cadastro grava os fatos do produto e é a fonte da fila pendente.
+        A definição Enhanced adiciona REGRAS_ANUNCIO e PROPORCAO. Criação,
+        Resultados, Montar anúncio, Anunciar e Sociais consultam dados ligados
+        a essa tabela; Sociais também lê A_ENTRADA diretamente.
+
+    VENDAS
+        A pipeline apaga e recria as linhas de IDs daquele produto. Cada linha
+        representa um ID de produção e guarda produto interno, configuração de
+        kit, data e caminho/imagem em OBSERVACOES. Montar anúncio e Anunciar
+        carregam IDs daqui. VENDAS também guarda plataformas, preço e custo em
+        parte do fluxo. Não é o histórico de compras realizadas.
+
+    MARKET_PLACE
+        Cada linha representa uma unidade de estoque associada a um ID. A tabela
+        também guarda preço, custo, título, descrição, marketplaces e os dados
+        do comprador/venda. Vendas e Registros dependem dela. Montar anúncio
+        sincroniza os dados comerciais e cria unidades sem apagar unidades
+        vendidas; o salvamento de texto da vitrine altera apenas título/descrição.
+
+    CÓDIGO LEGADO
+        _BANCOS_/Banco_Bados.py e os módulos Streamlit continuam com leitores e
+        escritores próprios. A reformulação PySide6 não deve remover nem
+        presumir que atualizou esses consumidores.
+
+MATRIZ RESUMIDA — CAMPO → PERSISTÊNCIA → LEITORES
+    Cadastro:
+        nome interno → A_ENTRADA.PRODUTO (chave atual);
+        referência, diretório, descrição, serventia, acompanha, acabamento,
+        configuração de kit e observações → A_ENTRADA;
+        regras de anúncio e proporção → colunas adicionais A_ENTRADA da camada
+        Enhanced. O salvamento acontece no fluxo do Cadastro.
+
+    Criação/Resultados:
+        opções de processamento e seleção de mídias → controles/arquivos do
+        produto, sem cadastro relacional permanente dessas opções;
+        IDs gerados, data, kit e caminho → VENDAS.ID, DATA, KIT e OBSERVACOES.
+        A pipeline substitui os IDs anteriores do mesmo nome interno.
+
+    Montar anúncio:
+        título e descrição → rascunho de sessão até salvar;
+        plataformas, preço, custo e quantidade por ID → VENDAS e linhas de
+        unidades em MARKET_PLACE. Plataformas são hoje texto multivalorado e a
+        tela aceita uma lista fixa de quatro opções. O salvamento é separado de
+        “Aplicar a todos os IDs”.
+
+    Anunciar:
+        seleciona IDs gerados e lê fatos/caminhos do produto e dados comerciais;
+        título/descrição editados são gravados em MARKET_PLACE. A tela não
+        executa publicação externa nem representa uma ação de publicação.
+
+    Vendas:
+        quantidade, comprador, CPF, telefone, endereço, marketplace e taxa →
+        MARKET_PLACE nas unidades selecionadas. Não há data nem identificador
+        próprio de transação; o histórico é apresentado por unidade.
+
+    Sociais:
+        fatos e caminho de mídia vêm de A_ENTRADA; título/descrição vêm de
+        MARKET_PLACE. Os rascunhos não são persistidos.
+
+    Registros e etiquetas:
+        Registros consulta VENDAS e MARKET_PLACE. As etiquetas são montadas a
+        partir dos IDs, estoque e dados comerciais no controlador embutido em
+        Montar anúncio; essa função precisa ser separada da preparação do
+        anúncio antes de ser reposicionada.
+
+NAVEGAÇÃO E MODELO ALVO — PONTOS A RESOLVER NA IMPLEMENTAÇÃO
+    - Hoje a janela usa abas horizontais; Cadastro e Medidas avulsas são
+      subabas, e Montar anúncio/Anunciar são subabas do mesmo AnuncioTab.
+    - A vitrine Anunciar foi confirmada como seleção/revisão de produtos e
+      edição de título/descrição. Como não publica, não deve ser apresentada
+      como se houvesse integração de publicação.
+    - Não existe tabela permanente de produtos, entidade separada de anúncio
+      por marketplace, catálogo configurável de marketplaces nem estado
+      persistente pendente/concluído.
+    - O nome interno do produto é a chave atual; VENDAS associa IDs por
+      NOME_PRODUTO. O título comercial não pode assumir esse papel.
+    - Ao concluir um produto, a cópia permanente precisa preservar também
+      REGRAS_ANUNCIO e PROPORCAO, além dos campos-base, IDs, kits, diretório e
+      caminhos. As unidades de MARKET_PLACE devem permanecer compartilhadas
+      entre marketplaces.
+    - A migração deve ser aditiva e transacional, com backup verificável antes
+      de qualquer alteração. A_ENTRADA só pode ser limpa após confirmar a
+      gravação permanente. Não há banco real disponível neste workspace para
+      fazer esse backup agora.
+
+    [x] Janela PySide6 ativa e cadeia de imports identificadas.
+    [x] Consumidores ativos de A_ENTRADA, VENDAS e MARKET_PLACE rastreados.
+    [x] Campos principais e persistência atual mapeados; lacunas registradas.
+    [x] Papel atual de Anunciar e destino das etiquetas confirmados.
+    [x] Estrutura existente de _APP_ conferida; não é necessário criar outro app.
+    [x] Ambiguidades registradas sem remover funções existentes.
+
+
+15. IMPLEMENTAÇÃO DA NAVEGAÇÃO POR ÁREAS
+----------------------------------------
+Em 2026-11-09, a janela PySide6 foi organizada em quatro áreas verticais à
+esquerda: Cadastro, Marketplace, Vendas e Configuração. Cada área usa um workspace
+próprio com abas horizontais; as telas existentes são reutilizadas, sem criar
+uma segunda aplicação nem duplicar implementações legadas.
+
+  As implementações das telas estão organizadas nos pacotes de área iniciados
+  por maiúscula dentro de _APP_: Cadastro/, Marketplace/, Vendas/ e
+  Configuracao/. main_window.py importa as telas por esses caminhos. Na cópia
+  atual do workspace, as antigas pastas de tela em minúsculas (cadastro,
+  criacao, resultados, midias_avulsas, anuncio, vendas, sociais e prompts) não
+  existem mais; _APP_/producao continua como serviço da pipeline. A existência
+  de classes ou funções históricas repetidas dentro de arquivos como
+  PySide6_core.py e App_Janela_PySide6.py é uma pendência separada e não deve
+  ser removida sem conferir a definição/import ativo.
+
+Cadastro reúne Cadastro, Criação, Revisar mídias, Montar anúncio e Medidas
+avulsas. Criação, Revisar mídias e Montar anúncio continuam condicionadas à
+existência de produtos pendentes. Configuração reúne Configurações, Prompts e
+Banco de dados. Marketplace reúne Anúncios, Anunciar/etiquetas, Sociais e
+Registros. Vendas contém Registrar vendas e Histórico.
+
+A barra prefere Midias/logo.png, usa Midias/icone.ico como alternativa e
+mantém uma marca textual quando os dois arquivos não estão disponíveis. Os
+assets Midias não existem nesta cópia do workspace; validar visualmente a logo
+no computador de destino continua pendente.
+
+Na etapa de reorganização da navegação, nenhuma tabela, registro ou dado foi
+alterado. A aplicação, workflows e testes que iniciem a interface não foram
+executados. A implementação do modelo e da migração SQLite foi adicionada
+depois e está descrita na seção 16; sua validação com o banco real continua
+pendente.
+
+
+16. HANDOFF ATUAL — CONTINUIDADE DO BANCO
+-----------------------------------------
+Conferência documental do workspace em 2026-11-09: a auditoria anterior da
+Etapa 1 continua válida, e há implementação nova de ciclo de vida e migração no
+código. As seções 13 e 14 registram o estado anterior; esta seção prevalece
+quanto ao estado atual da implementação do banco.
+
+ESTADO DO BANCO DISPONÍVEL AGORA
+    - _BANCOS_/Base_Dados.db está na versão 1 do esquema novo e passou
+      PRAGMA integrity_check. A migração de esquema já havia sido executada.
+    - _BANCOS_/backups/Base_Dados_20261109_144407.db também passou na checagem
+      de integridade e contém o esquema antigo.
+    - A_ENTRADA, VENDAS e MARKET_PLACE têm os mesmos registros nos dois
+      arquivos. Nenhuma linha dessas tabelas foi apagada pela migração.
+    - No banco atual: 8 entradas pendentes, 2 registros/IDs em VENDAS e 142
+      unidades em MARKET_PLACE. As tabelas PRODUTOS_ATIVOS, ANUNCIOS e
+      ANUNCIO_IDS estão vazias; MARKETPLACES contém quatro opções padrão.
+    - A auditoria não encontrou vínculo de produto+ID entre os registros de
+      estoque de MARKET_PLACE e VENDAS. Seis dos nove nomes de produto em
+      MARKET_PLACE também aparecem em A_ENTRADA.
+    - Orientação confirmada pelo usuário: manter no legado, por enquanto,
+      anúncios e estoque sem vínculo confirmado. Não mover nem apagar essas
+      linhas sem uma reconciliação explícita.
+
+JÁ EXISTE EM CÓDIGO
+    - _APP_/product_lifecycle.py cria, por ação explícita, o esquema aditivo
+      HPC_SCHEMA_VERSION, PRODUTOS_ATIVOS, MARKETPLACES, ANUNCIOS e ANUNCIO_IDS.
+    - O novo modelo mantém o preço associado ao ID de produção e ao marketplace;
+      título e descrição ficam por anúncio. MARKET_PLACE continua responsável
+      pelas unidades físicas e dados de comprador/venda.
+    - A tela Configuração > Banco de dados oferece migração com confirmação,
+      backup SQLite, verificação de integridade e comparação das contagens das
+      tabelas antigas. A inicialização normal não deve ser descrita como
+      migração automática.
+    - A migração cria o esquema novo e os marketplaces padrão, mas não copia
+      automaticamente registros antigos para ANUNCIOS/ANUNCIO_IDS nem move
+      todos os produtos para PRODUTOS_ATIVOS. Os dados legados continuam nas
+      tabelas antigas; conferir se e como o histórico precisa ser preenchido.
+    - A conclusão do produto copia os fatos de A_ENTRADA para PRODUTOS_ATIVOS,
+      exige IDs e anúncio/preço ativo para cada ID, verifica a cópia e remove a
+      entrada na mesma transação.
+    - main_window.py atualiza navegação e telas após a conclusão. A página
+      Marketplace > Anúncios mantém uma leitura compatível com PRODUTOS_ATIVOS,
+      VENDAS e MARKET_PLACE. A página Marketplace > Anunciar/etiquetas passou a
+      usar essa mesma lista legada, somente para leitura. Sociais permanece
+      restrita a PRODUTOS_ATIVOS.
+    - A_ENTRADA continua sendo a fila pendente da área Cadastro. Como há zero
+      produtos permanentes no banco atual, Sociais não tem produtos para listar
+      até que produtos sejam concluídos. A lista de Anunciar/etiquetas pode
+      mostrar registros legados sem concluir nem migrar esses produtos.
+
+LIMITES E PENDÊNCIAS REAIS
+    - A checagem desta sessão foi somente leitura. O banco atual e o backup
+      foram verificados, mas a interface não foi executada e nenhum dado foi
+      migrado para as tabelas novas nesta sessão.
+    - A versão nova ainda reutiliza VENDAS para IDs de produção e MARKET_PLACE
+      para estoque/unidades e registros de venda. Não apagar nem renomear essas
+      tabelas; a revisão da separação conceitual e de todos os campos continua.
+    - A gravação comercial de anúncio e a conclusão do produto são ações
+      transacionais separadas. Confirmar no uso real que não deixam dados
+      incompatíveis entre si quando uma das etapas falha.
+    - Conferir a migração e os consumidores em uma cópia do banco real:
+      Anúncios/Montar anúncio, Anunciar/etiquetas, Vendas, Sociais e Registros,
+      além dos módulos legados que ainda consultam as tabelas antigas.
+    - Verificar produto com vários IDs, variações/kits, mais de um marketplace,
+      quantidade de estoque, itens já vendidos e mais de um produto pendente.
+
+PRÓXIMO PASSO PARA O AGENTE
+    1. Revisar o esquema e o contrato de migração em
+       _APP_/product_lifecycle.py e a página
+       _APP_/Configuracao/Banco_Dados/banco_dados.py; manter a migração aditiva.
+    2. Preservar os anúncios e estoque sem vínculo nas tabelas legadas, conforme
+       orientação do usuário. Trabalhar em cópia para qualquer conversão e só
+       importar registros cuja associação a produto, ID e marketplace esteja
+       confirmada.
+    3. Conferir separadamente os IDs e nomes que não se correspondem; não tentar
+       "corrigir" a associação por aproximação nem marcar pendências como
+       concluídas automaticamente.
+    4. Validar no desktop que as telas continuam lendo o legado e que novos
+       anúncios gravam nas tabelas novas sem duplicar unidades de estoque.
+    5. Não implementar DELETE das tabelas antigas como atalho. Qualquer limpeza
+       depende de conciliação e autorização explícita.
+
+Nesta atualização, o banco atual e o backup foram inspecionados somente em modo
+de leitura; nenhum dado foi movido, apagado ou alterado. A escolha do usuário de
+manter os registros sem vínculo no legado deve ser respeitada.
+
+
+17. HANDOFF — CORREÇÕES DOS SELETORES E TRABALHO RESTANTE
+---------------------------------------------------------
+Atualizado em 2026-11-09 após investigar os seletores vazios. Esta seção é o
+estado mais recente e complementa/supersede qualquer descrição anterior que
+afirme que todos os seletores operacionais leem exclusivamente PRODUTOS_ATIVOS.
+
+CAUSA CONFIRMADA
+    - A migração aplicada ao banco acrescentou tabelas, mas não importou dados
+      das tabelas antigas. Não foi uma falha de consulta a um documento.
+    - No banco atual, A_ENTRADA contém 8 produtos pendentes. PRODUTOS_ATIVOS,
+      ANUNCIOS e ANUNCIO_IDS estão vazias. O fluxo definido deixa produtos
+      pendentes fora de Sociais até a conclusão em Cadastro > Montar anúncio.
+    - A página Marketplace > Anúncios lê PRODUTOS_ATIVOS e também os registros
+      antigos de VENDAS/MARKET_PLACE. Por isso consegue mostrar produtos mesmo
+      com PRODUTOS_ATIVOS vazia.
+    - Antes da correção, o seletor de Marketplace > Anunciar/etiquetas recebia
+      apenas listar_produtos_vendas(), que lê PRODUTOS_ATIVOS. Esse seletor
+      ficava vazio, embora existissem registros antigos.
+    - Registrar vendas usa MARKET_PLACE e não depende de PRODUTOS_ATIVOS.
+      A consulta atual do estoque não deveria resultar vazia neste banco:
+      foram encontradas 141 unidades disponíveis, agrupadas em 33 opções de
+      produto/ID. Há 142 linhas totais em MARKET_PLACE; uma tem dados de venda.
+
+CORREÇÕES FEITAS NO CÓDIGO
+    - _APP_/main_window.py: Marketplace > Anunciar/etiquetas agora recebe
+      listar_produtos_para_anunciar_somente_leitura(), do módulo
+      _APP_/Marketplace/Anuncios/Data_Anuncio_PySide6.py. A função combina
+      PRODUTOS_ATIVOS, VENDAS e MARKET_PLACE, deduplica nomes e abre o banco em
+      modo somente leitura. No banco atual ela encontra 11 nomes.
+    - _APP_/Marketplace/Anunciar/action_page.py: o seletor mostra quantos
+      produtos encontrou e agora exibe a causa da falha quando a leitura gera
+      uma exceção, em vez de apenas limpar e desativar a lista.
+    - _APP_/Marketplace/Sociais/Controller_Sociais_PySide6.py: a regra não foi
+      ampliada; Sociais continua mostrando apenas produtos concluídos. Quando
+      não há produtos permanentes, a mensagem agora informa quantos produtos
+      estão pendentes e orienta concluir em Cadastro > Montar anúncio.
+    - _APP_/Configuracao/Banco_Dados/banco_dados.py: a explicação da tela deixa
+      explícito que a atualização do esquema não importa os registros antigos
+      automaticamente.
+
+VERIFICAÇÕES FEITAS NESTA SESSÃO
+    - Os quatro arquivos Python alterados passaram na análise sintática e na
+      verificação simples de espaços em branco.
+    - A função somente leitura usada pelo seletor de Anunciar foi executada
+      contra o banco atual: retornou 11 nomes.
+    - A consulta/função de estoque de Registrar vendas foi conferida contra o
+      banco atual: 33 opções de produto/ID e 141 unidades disponíveis.
+    - PRAGMA integrity_check retornou ok no banco atual e no backup.
+    - Contagens atuais: A_ENTRADA=8; VENDAS=2; MARKET_PLACE=142;
+      PRODUTOS_ATIVOS=0; ANUNCIOS=0; ANUNCIO_IDS=0; MARKETPLACES=4.
+    - Nenhum dado foi migrado, inserido, apagado ou alterado nesta sessão.
+      O backup permanece intacto.
+
+LIMITAÇÃO IMPORTANTE DA VERIFICAÇÃO
+    - A interface desktop não foi iniciada neste ambiente porque PySide6 não
+      está instalado e não há workflow desktop configurado. Portanto, os
+      seletores foram verificados pelo código e pelas consultas ao SQLite, mas
+      não houve confirmação visual/interativa no computador do usuário.
+    - No banco deste workspace, Registrar vendas deve apresentar 33 opções.
+      Se continuar vazio depois de reabrir a versão atualizada, verificar
+      primeiro o caminho DB_PATH efetivamente usado, o status mostrado pela
+      tela e os logs de erro. Não presumir que faltam registros e não alterar
+      MARKET_PLACE antes dessa confirmação.
+    - Em Sociais, a lista continuar sem produtos permanentes é esperado neste
+      banco. A mensagem deve apontar os 8 pendentes; não preencher a lista com
+      A_ENTRADA sem uma decisão explícita de mudar o fluxo acordado.
+
+O QUE FALTA PARA CONCLUIR E DEIXAR O FLUXO VALIDADO
+    1. Abrir a aplicação atualizada em um ambiente com PySide6 e conferir:
+       Anunciar/etiquetas com 11 nomes, Registrar vendas com 33 opções e 141
+       unidades, e Sociais indicando os produtos pendentes.
+    2. Se Registrar vendas divergir desses números, confirmar que a aplicação
+       está lendo _BANCOS_/Base_Dados.db deste projeto. Inspecionar a mensagem
+       de erro e os logs antes de mudar a consulta ou o banco.
+    3. Decidir com o usuário se os registros antigos devem ser reconciliados
+       para o modelo novo, de modo a aparecerem em Sociais. Se autorizado,
+       criar um fluxo assistido de confirmação de produto, ID, anúncio e
+       marketplace. Não associar por aproximação nem mover registros sem
+       vínculo confirmado.
+    4. Manter anúncios/estoque não vinculados nas tabelas legadas. Não apagar,
+       renomear ou importar em massa A_ENTRADA, VENDAS ou MARKET_PLACE.
+    5. Validar no desktop a conclusão de um produto, a preservação dos demais
+       produtos pendentes, a atualização das listas depois da conclusão e a
+       reabertura do app.
+    6. Validar casos com vários IDs, kits/variações, mais de um marketplace,
+       unidades vendidas e não vendidas, além das falhas entre salvar anúncio e
+       concluir produto.
+
+INSTRUÇÕES PARA A PRÓXIMA IA
+    - Não executar novamente a migração do esquema: a versão 1 já está
+      instalada no banco atual.
+    - Começar pela verificação visual da aplicação atualizada, especialmente
+      Registrar vendas, cujo carregador e os dados locais já retornam opções.
+    - Não tratar a lista vazia de Sociais como falha de leitura sem antes
+      verificar PRODUTOS_ATIVOS e o estado pendente/concluído.
+    - Preservar o histórico deste documento e atualizar esta seção de handoff
+      com novos resultados confirmados, deixando claro o que foi testado na
+      interface e o que foi apenas inspecionado no código/banco.

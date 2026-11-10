@@ -1,0 +1,134 @@
+# hen-place-control/nucleo/_DOC_RESUMO.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HEN-PLACE-CONTROL — RESUMO DE ESTADO
+Última atualização: 2026-11-09 (Medidas avulsas dentro de Cadastro; Sociais usa anúncio salvo)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ESTADO ATUAL — 2026-11-09
+─────────────────────────
+• Cadastro contém a subaba Medidas avulsas para tratar imagens e vídeos fora da Criação completa e
+  salvar cópias na pasta do produto escolhido ou em outra pasta selecionada.
+  Cria/reutiliza b_sem_fundo, c_fundo_branco, d_medidas e F_video_shopee dentro
+  do destino, preservando originais e sem sobrescrever saídas. Não atualiza o
+  cadastro, o manifesto nem produtos.txt; validação real no Windows pendente.
+• Sociais usa também o título e a descrição salvos em MARKET_PLACE; os fatos do
+  Cadastro prevalecem. Rascunhos sociais antigos precisam ser gerados novamente.
+• Os seletores de produto mostram primeiro os cadastros mais recentes, seguindo
+  a ordem de inclusão no banco, sem ordem alfabética.
+• Anúncio acompanha o produto ativo, mantém o texto revisado em rascunho
+  durante a sessão, salva a configuração por ID e oferece prévia/impressão de
+  etiquetas depois da grade e do salvamento.
+• Vendas registra compras realizadas sobre unidades de MARKET_PLACE, incluindo
+  dados do comprador, marketplace e taxa; o histórico é por unidade e não tem
+  data nem identificador de transação no esquema atual.
+• A IA usa contextos por aba e catálogo de prompts editável. Só Cadastro habilita
+  ferramentas; Anúncio usa texto, não envia imagens e não preenche campos.
+  Históricos visíveis ficam separados por aba, mas mensagens recentes de outros
+  chats do mesmo produto são enviadas como referência, sem cruzar produtos.
+• A aba Prompts ativa está em _APP_/prompts/App_Prompts_PySide6.py. Catálogo,
+  referências copiáveis e prompt externo de Anúncio usam arquivos AppData
+  separados; os detalhes estão em _APP_/prompts/_DOC_prompts.txt.
+• O texto-base externo de pesquisa da aba Anúncio pode ser editado em Prompts e
+  é salvo em AppData/IAs/prompts/sistema.json. O controlador acrescenta os dados
+  do produto antes de copiar o prompt para uma IA externa.
+• A IA interna de Vendas continua sem contexto automático: main_window.py envia
+  {} ao painel nessa aba. A análise interna ampla com preços e dimensões ainda
+  não está conectada.
+• A revisão confirmou estaticamente os caminhos de interface e persistência.
+  A execução visual e o teste físico da impressora continuam pendentes no
+  computador Windows de destino; o aplicativo não foi iniciado nesta IDE.
+• JSON automático, busca web interna, publicação em marketplace e análise visual
+  de imagens permanecem futuros/fora do escopo atual, não falhas a corrigir.
+
+ÚLTIMA SESSÃO — Organização da aba Prompts (2026-10-12)
+───────────────────────────────────────────────────────
+• A implementação ativa de CatalogPromptsTab foi organizada em
+  _APP_/prompts/App_Prompts_PySide6.py, com documentação própria.
+• O prompt externo de pesquisa da aba Anúncio pode ser editado e usa
+  AppData/IAs/prompts/sistema.json, separado do catálogo por escopo e das
+  referências para copiar.
+• O fluxo de pesquisa continua sendo cópia para uma IA externa. A IA interna de
+  Vendas ainda recebe contexto vazio e precisa de implementação separada.
+• Foram conferidos os arquivos estaticamente. O desktop PySide6 e os testes não
+  foram executados nesta IDE; validação no Windows continua pendente.
+
+SESSÃO ANTERIOR — Validação do Cadastro (2026-09-14)
+────────────────────────────────────────────────────
+• O salvamento do Cadastro foi validado no computador de destino com produto
+  único e duas variações.
+• O mesmo arquivo de origem pode ser usado em grupos diferentes e é copiado
+  com nomes finais distintos para cada grupo.
+• O padrão confirmado inclui referência do grupo, sequência, medidas e peso,
+  por exemplo ACO1_01_5x3x2_100.jpg e ACO2_01_7x5x3_150.jpg.
+• A pasta final também recebe produtos.txt, .ordem_midias.json, vídeos e as
+  pastas Proportion_Ajustada e Ajuste_Geral.
+• Naquela data, a próxima etapa planejada era a Produção; o estado atual está
+  resumido acima e no documento mestre.
+
+HISTÓRICO — desenho inicial de memória da IA (2026-09-11; supersedido)
+───────────────────────────────────────────────────────────────────────
+• A proposta inicial descrevia persistência em tabelas SQLite. Ela foi
+  substituída: a implementação ativa mantém memória em JSON/JSONL no AppData,
+  sem tabelas de memória no banco comercial.
+• O Cadastro Enhanced envia ao painel um snapshot limitado com campos, mídias,
+  medidas, registro A_ENTRADA e estado de salvamento.
+• O AIPanel carrega e persiste conversa por produto_id e escopo da aba.
+• A ponte inicial usa a chave existente A_ENTRADA.PRODUTO; o identificador
+  comercial definitivo ainda precisa ser confirmado no fluxo completo.
+• A execução visual, o microfone e os provedores continuam sem validação real
+  nesta IDE.
+
+ESTADO POR MÓDULO — resumo atual
+─────────────────
+_APP_/             ✅ Interface PySide6; Anúncio e Vendas ativos; Cadastro Enhanced e painel lateral de IA
+                      ⏳ Validar execução de Criação/Produção no computador de destino
+                   ⚠️ Definições repetidas em vários arquivos
+_BANCOS_/          ✅ SQLite com A_ENTRADA, VENDAS e MARKET_PLACE
+_FERRAMENTAS_/     ✅ Prompts e regras auxiliares de variações e kits
+                   ⚠️ Associação de ordem precisa ser reconciliada com o fluxo Enhanced
+Tratar_midias/     ✅ Módulos de processamento chamados pela produção
+                   [INFORMAÇÃO NÃO CONFIRMADA] Execução completa não validada nesta sessão
+_IAS_/              ✅ Painel, configuração no AppData, streaming, fallback,
+                      contextos por escopo e memória JSON/JSONL no AppData
+                      ⏳ Validação manual; resumos e análise visual multimodal
+Gerar_Documentos/  ✅ Módulos de documentos e controle financeiro existentes
+                   [INFORMAÇÃO NÃO CONFIRMADA] Estado funcional não revisado nesta sessão
+
+PENDÊNCIAS GLOBAIS — lista legada a revalidar antes de executar
+──────────────────
+• Completar a leitura, validação e apresentação do produtos.txt na aba Criação.
+• Consumir os nomes finais e a ordem registrada em .ordem_midias.json.
+• Definir a separação de produto único, variações, kits e único também em kit.
+• Definir quando a Criação deve reprocessar depois de uma alteração no produtos.txt.
+• Manter a associação manual feita no Cadastro sem voltar ao vínculo automático
+  por posição do TXT de origem.
+• Consolidar as definições repetidas em main.py e nos módulos PySide6.
+• Confirmar a dependência PySide6 no processo de instalação.
+• Validar a aplicação em ambiente com PySide6 e as dependências de processamento instaladas.
+• Validar no desktop a interface, a memória em AppData, os provedores, Anúncio,
+  Vendas e a prévia/impressão de etiquetas.
+• Confirmar se A_ENTRADA.PRODUTO é o identificador comercial definitivo usado
+  também no estoque, na prateleira e na nota.
+• Registrar tentativas individuais de fallback se a auditoria for necessária.
+• Definir suporte para análise visual de imagens anexadas por provedores multimodais.
+
+--- 2026-09-11: Memória inicial da IA (desenho depois substituído) ---
+• A primeira proposta descrevia serviço de memória no SQLite existente; o
+  estado atual usa JSON/JSONL em AppData.
+• Conectado o snapshot do Cadastro ao AIPanel.
+• Persistidos produto, conversa e mensagens por produto e aba.
+• Mantida a pendência de confirmação do identificador comercial e validação real.
+
+--- 2026-09-10: Conversa e configuração da IA ---
+• Atualizado o contrato do _APP_ para incluir o painel de IA funcional.
+• Registrados os módulos de configuração local e serviço HTTP dos provedores.
+• Registradas as limitações atuais: contexto automático do Cadastro e imagens.
+
+--- 2026-09-10: Correção do microfone e logs ---
+• Corrigido o fluxo que iniciava a captura de voz no CadastroTab.
+• Mantida a possibilidade de digitar manualmente e acrescentar a transcrição.
+• Registrados logs detalhados do fluxo e mantida a pendência de teste físico.
+
+--- 2026-09-10: Feedback do microfone e seleção de pastas ---
+• Atualizados os documentos do módulo _APP_ com o estado visível do microfone e o início dos diálogos em Downloads.
+• Registrado que o cadastro gera o produtos.txt final a partir dos campos e que a importação automática de TXT da origem ainda não está confirmada.

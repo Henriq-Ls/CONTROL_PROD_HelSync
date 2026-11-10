@@ -1,0 +1,61 @@
+"""Compatibilidade da memoria da IA.
+
+A implementacao ativa fica em ia_memory_appdata.py e usa PASTA_APPDATA/IAs.
+Este modulo preserva os imports existentes enquanto a migracao e concluida.
+"""
+
+from .ia_memory_appdata import (
+    abrir_conversa,
+    abrir_conversa_global,
+    apagar_conversa_global,
+    apagar_historico_conversa,
+    apagar_historico_produto,
+    apagar_rascunho,
+    carregar_contexto,
+    carregar_memoria_compartilhada_produto,
+    carregar_historico_legado_producao,
+    carregar_mensagens,
+    carregar_mensagens_globais,
+    carregar_rascunho_mensagens,
+    caminho_rascunho,
+    definir_rascunho_ativo,
+    init_memory_schema,
+    iniciar_rascunho,
+    limpar_rascunho_ativo,
+    obter_rascunho_ativo,
+    obter_produto,
+    promover_rascunho,
+    salvar_contexto_rascunho,
+    salvar_mensagem_global,
+    salvar_mensagem,
+    salvar_rascunho_mensagem,
+    salvar_produto,
+)
+
+__all__ = [
+    "carregar_contexto",
+    "carregar_memoria_compartilhada_produto",
+    "carregar_mensagens",
+    "carregar_mensagens_globais",
+    "carregar_rascunho_mensagens",
+    "abrir_conversa",
+    "abrir_conversa_global",
+    "apagar_conversa_global",
+    "apagar_historico_conversa",
+    "apagar_historico_produto",
+    "apagar_rascunho",
+    "carregar_historico_legado_producao",
+    "caminho_rascunho",
+    "definir_rascunho_ativo",
+    "init_memory_schema",
+    "iniciar_rascunho",
+    "limpar_rascunho_ativo",
+    "obter_rascunho_ativo",
+    "obter_produto",
+    "promover_rascunho",
+    "salvar_contexto_rascunho",
+    "salvar_mensagem_global",
+    "salvar_mensagem",
+    "salvar_rascunho_mensagem",
+    "salvar_produto",
+]

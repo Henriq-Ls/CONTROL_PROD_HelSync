@@ -1,0 +1,137 @@
+HEN-PLACE-CONTROL — ÚLTIMAS ATUALIZAÇÕES
+Data: 09/11/2026
+
+SELETORES DE PRODUTO — MAIS RECENTES PRIMEIRO
+--------------------------------------------
+- Vendas, Anúncio, Sociais e Medidas avulsas agora seguem a ordem de inclusão
+  no banco, do mais recente para o mais antigo, sem ordenação alfabética.
+
+CADASTRO — MEDIDAS AVULSAS E TEXTO PARA SOCIAIS
+----------------------------------------------
+- Medidas avulsas agora é uma subaba de Cadastro; a aba principal contém
+  Cadastro e Medidas avulsas. Anúncio continua separado.
+- Sociais usa o título e a descrição mais recentes salvos em MARKET_PLACE junto
+  com os fatos de A_ENTRADA. Quando houver conflito, os fatos do Cadastro valem.
+- Textos sociais já gerados continuam como rascunhos; gere novamente depois de
+  atualizar o texto em Anúncio.
+
+ÍCONE DO APLICATIVO
+-------------------
+- Midias/icone.ico é usado como ícone do aplicativo e da janela principal.
+- Midias/logo.png permanece no projeto, mas não é exibida na janela principal.
+- O caminho do ícone é centralizado em _CONFIGURA_/__init__.py.
+
+MÍDIAS AVULSAS — PROCESSAMENTO INDEPENDENTE
+-------------------------------------------
+- Adicionada a aba “Mídias avulsas” para processar imagens ou vídeos sem iniciar
+  a Criação completa.
+- Imagens passam por ajuste, remoção de fundo, composição em branco e geração
+  de medidas; vídeos reutilizam a conversão, música, recursos e limites atuais.
+  Vídeos sem áudio também podem receber apenas a música selecionada.
+- O usuário pode salvar em um produto cadastrado ou em qualquer outra pasta.
+  O destino é a raiz da pasta escolhida; não é criada outra pasta de produto.
+  Dentro dela, a aba cria ou reutiliza b_sem_fundo, c_fundo_branco, d_medidas
+  e F_video_shopee. Preserva os originais e não sobrescreve saídas existentes;
+  não altera A_ENTRADA, produtos.txt ou .ordem_midias.json.
+- A tarefa roda em segundo plano e preserva originais e arquivos já existentes.
+- Sintaxe, validações de medidas, cópia sem sobrescrita e metadados de vídeo
+  conferidos localmente; o app e os tratamentos pesados ainda precisam ser
+  validados com mídia real no computador Windows de destino.
+
+ARQUIVOS PRINCIPAIS
+-------------------
+- `_APP_/midias_avulsas/App_Midias_Avulsas_PySide6.py` e
+  `_APP_/midias_avulsas/processor.py`: interface e serviços da nova aba.
+- `Tratar_midias/v__Converter_video.py`: suporte a vídeo sem áudio original.
+- `_APP_/main_window.py`: integração na navegação e atualização de recursos.
+- `_APP_/midias_avulsas/_DOC_MIDIAS_AVULSAS.txt`: contrato e limites.
+
+----------------------------------------
+Data: 12/10/2026
+
+ANÚNCIO — VITRINE E CORREÇÃO NA ABERTURA
+----------------------------------------
+- A aba Anúncio tem “Montar anúncio” e “Anunciar”. A vitrine mostra o produto
+  mais recente por padrão, permite selecionar outros produtos, conferir imagens
+  e vídeo, revisar dados comerciais e copiar o título, a descrição ou a ficha.
+- Na vitrine, título e descrição podem ser editados e salvos sem alterar
+  estoque, preço, custo, dados da venda ou do comprador. Categoria continua
+  indisponível porque não existe coluna para ela no banco atual.
+- Corrigido o erro de inicialização `NameError: name 'Qt' is not defined`:
+  `Anunciar_PySide6.py` usa `Qt.ItemFlag` ao montar a grade e agora importa `Qt`.
+- No log recebido, as linhas `Input #...` do FFmpeg são metadados dos arquivos
+  de mídia; a falha que interrompia a abertura era o `NameError` acima.
+
+PROMPTS DE IMAGEM — CAPA, USO E DETALHE
+---------------------------------------
+- Os três prompts agora recebem automaticamente as dimensões, a proporção e a
+  orientação exatas da imagem anexada.
+- A instrução pede a maior resolução e qualidade disponíveis nesse formato,
+  evitando esticar, cortar para caber ou converter a referência para uma
+  proporção padrão diferente.
+- Foi removida a orientação para não corrigir nem completar partes danificadas
+  ou cortadas. Os prompts agora pedem melhora de iluminação, nitidez e ruído,
+  correção de defeitos visíveis e tentativa de reconstrução plausível de partes
+  danificadas, faltando ou cortadas.
+- A reconstrução deve preservar a identidade, a geometria, os componentes, as
+  cores e o acabamento do produto. Os dados confirmados do cadastro podem
+  ajudar, mas os prompts proíbem inventar funções, acessórios ou características
+  sem apoio na referência ou no cadastro. Essas regras prevalecem sobre
+  instruções conflitantes nos modelos editáveis.
+- A proporção e as dimensões são calculadas a partir da imagem anexada ao
+  prompt. A seleção de proporção do Cadastro é aplicada ao PNG preparado, mas
+  não é gravada em A_ENTRADA.
+
+RESULTADOS — F PRÉ-MARKETPLACE E G MARKETPLACE
+---------------------------------------------
+- Clicar na miniatura de F abre o editor da imagem com a prévia e os controles
+  ao lado; não há um botão separado de “Pré-visualizar ajustes”.
+- Logo, @ do perfil, endereço da loja e texto personalizado podem ser
+  combinados. Cada opção é independente e começa desativada. O @ e o endereço
+  vêm de Configurações; o texto personalizado é digitado no editor.
+- As posições dos recursos são: logo no alto à esquerda, @ no alto à direita,
+  endereço embaixo à esquerda e texto personalizado embaixo à direita.
+- O pop-up oferece “OK · só esta imagem”, “Aplicar às marcadas” e “Aplicar em
+  todas de F”. A configuração é salva por imagem em
+  `.hen-marketplace-edits.json`, dentro da pasta F, e pode ser reaberta e
+  alterada. A logo escolhida na Criação normal não é aplicada automaticamente
+  neste fluxo.
+- Adicionar ou importar imagens para F apenas copia os arquivos; não aplica
+  recursos nem reduz o tamanho. As imagens originais e os arquivos de F
+  permanecem intactos durante a edição e a prévia.
+- “Concluir e enviar para G” usa os ajustes salvos de cada imagem marcada,
+  prepara as cópias finais, aplica a redução de tamanho somente nessa etapa e
+  verifica o limite de 2.000.000 bytes antes de gravar em G. Imagens sem
+  recursos salvos são enviadas sem logo ou texto. O envio é uma cópia local
+  para G, não uma publicação externa.
+
+ARQUIVOS PRINCIPAIS
+-------------------
+- `_APP_/anuncio/Controller_Anuncio_PySide6.py` e
+  `_APP_/anuncio/Anunciar_PySide6.py`: subabas “Montar anúncio” e “Anunciar”,
+  seleção do produto, revisão, cópia, edição e salvamento do texto.
+- `_APP_/anuncio/Anunciar_Midias_PySide6.py`: galeria de imagens e prévia dos
+  vídeos do produto na vitrine.
+- `_APP_/PySide6_core.py`: salvamento do título e da descrição sem alterar os
+  campos comerciais ou dados da venda.
+- `teste/testar_salvamento_anuncio_sqlite.py`: teste isolado de persistência e
+  preservação do estoque e dos dados da venda.
+- `_APP_/anuncio/_DOC_ANUNCIO.txt`: documentação do fluxo e seus limites.
+- `_APP_/criacao/Controller_Criacao_PySide6.py`: prompts de imagem, editor,
+  receitas por imagem e conclusão para G.
+- `_APP_/producao/pipeline.py`: composição dos recursos e redução das cópias
+  finais.
+- `_APP_/resultados/App_Resultados_PySide6.py` e
+  `_APP_/resultados/_DOC_RESULTADOS.txt`: interface e documentação do fluxo.
+- `_FERRAMENTAS_/prompts_ia/geracao_imagem.json`,
+  `_APP_/prompts/App_Prompts_PySide6.py` e
+  `_APP_/prompts/_DOC_prompts.txt`: modelos e documentação dos prompts.
+
+VERIFICAÇÃO
+-----------
+- O teste isolado de salvamento SQLite passou, incluindo a verificação de que
+  texto do anúncio não altera estoque nem dados da venda.
+- A sintaxe dos módulos Python alterados foi conferida estaticamente e o
+  `git diff --check` passou.
+- O aplicativo desktop não foi iniciado neste ambiente; a abertura visual ainda
+  deve ser conferida no Windows de destino.

@@ -1,0 +1,892 @@
+# HEN-PLACE-CONTROL
+# DOCUMENTO EXPLICATIVO — ENTRADA E CADASTRO DE PRODUTOS
+#
+# Local deste documento:
+#   _APP_/cadastro/_DOC_ENTRADA_CADASTRO.txt
+#
+# Este documento explica o comportamento implementado no código atual da
+# entrada de produtos. Ele não é um resumo curto e não substitui o código.
+# Quando houver diferença entre a documentação antiga e o código carregado
+# atualmente, este documento registra o comportamento encontrado no código.
+#
+# A análise do código foi complementada por uma validação manual no computador
+# de destino em 2026-09-14. O salvamento de um produto único com duas variações
+# foi confirmado. Produto único sem variação, kits e produto único também vendido
+# em kit continuam documentados pelo fluxo do código e devem ser validados na
+# próxima rodada de testes da Produção.
+
+
+===============================================================================
+0. ESTADO FINAL CONFIRMADO DO CADASTRO
+===============================================================================
+
+O Cadastro foi encerrado como etapa de entrada. A organização das imagens e a
+atribuição de medidas acontecem nos grupos da tela, não por uma associação
+automática entre a posição da imagem e a linha do TXT.
+
+O resultado confirmado para duas variações inclui:
+
+    ACO1_01_5x3x2_100.jpg
+    ACO1_02_5x3x2_100.jpg
+    ACO1_03_5x3x2_100.jpg
+    ACO2_01_7x5x3_150.jpg
+    ACO2_02_7x5x3_150.jpg
+    ACO2_03_7x5x3_150.jpg
+
+O padrão dos nomes finais é:
+
+    <REFERÊNCIA_DO_GRUPO>_<SEQUÊNCIA>_<ALTURA>x<LARGURA>x<ESPESSURA>_<PESO>.<EXT>
+
+Altura, largura e espessura são informadas em centímetros no Cadastro. O peso
+pode ser informado em gramas ou quilogramas; um valor sem unidade segue a
+convenção do campo Peso e é interpretado como gramas. O nome final preserva os
+valores para que a aba Criação possa identificar dimensões sem confundi-las com
+configuração de venda ou código interno do grupo.
+
+O mesmo arquivo de origem pode ser usado em mais de um grupo. Cada ocorrência
+é copiada para o destino com o nome final do grupo correspondente. Isso é
+válido e não deve ser tratado como erro ou duplicação indevida.
+
+O Cadastro entrega para a próxima etapa:
+
+    - registro em A_ENTRADA;
+    - imagens renomeadas;
+    - vídeos com o nome original;
+    - produtos.txt com uma linha por imagem e suas medidas/peso;
+    - .ordem_midias.json com a ordem dos nomes finais;
+    - a_ajuste_geral, contendo os PNGs de entrada da Produção.
+
+A Produção ativa consome a_ajuste_geral. Os JPEGs originais permanecem na raiz
+da pasta do produto; o Cadastro não cria mais as pastas persistentes
+Proportion_Ajustada ou Ajuste_Geral. Pastas antigas não são apagadas
+automaticamente.
+
+
+===============================================================================
+1. CAMINHO REAL DA TELA DE CADASTRO
+===============================================================================
+
+O ponto de entrada do aplicativo é:
+
+    main.py
+
+O fluxo da janela principal passa por:
+
+    _APP_/main_window.py
+        -> _APP_/App_Janela_PySide6.py
+        -> _APP_/cadastro/App_Cadastro_Prod_PySide6_Enhanced.py
+        -> _APP_/cadastro/App_Cadastro_Prod_PySide6.py
+
+O módulo App_Cadastro_Prod_PySide6.py contém blocos históricos repetidos. Em
+Python, a última definição de uma classe ou função com o mesmo nome substitui
+as anteriores. A camada App_Cadastro_Prod_PySide6_Enhanced.py importa o módulo
+legado, troca a galeria de mídias e substitui alguns métodos da classe
+CadastroTab.
+
+A implementação efetivamente usada na janela atual é, portanto, a classe
+CadastroTab do módulo legado, com os métodos aprimorados aplicados pela camada
+Enhanced.
+
+
+===============================================================================
+2. FINALIDADE DA ENTRADA
+===============================================================================
+
+A aba Cadastro reúne:
+
+    - identificação do produto;
+    - descrição e forma de uso;
+    - itens que acompanham o produto;
+    - acabamentos;
+    - pasta de origem das mídias;
+    - pasta de destino;
+    - proporção usada no processamento;
+    - classificação entre produto único e kit;
+    - quantidade de variações;
+    - quantidade de peças;
+    - quantidade de grupos de kit;
+    - imagens, vídeos e ordem das mídias;
+    - medidas e peso associados às imagens;
+    - contexto que será enviado ao painel de IA.
+
+Ao processar o cadastro, o sistema grava informações no SQLite, cria a pasta
+final do produto, copia as mídias, cria um manifesto de ordem, cria o
+produtos.txt e cria as pastas iniciais para o processamento de imagens.
+
+
+===============================================================================
+3. CAMPOS BÁSICOS
+===============================================================================
+
+3.1 Nome
+------------
+
+Campo de texto usado para identificar o produto.
+
+É obrigatório para salvar. A pasta final é criada usando o nome em maiúsculas:
+
+    <pasta de destino>/<NOME DO PRODUTO>
+
+O valor usado no banco é convertido para formato de título, por exemplo:
+
+    nome informado:  suporte de parede
+    valor no banco:  Suporte De Parede
+
+O nome também é usado para gerar uma referência automática.
+
+
+3.2 Origem
+------------
+
+É a pasta que contém as imagens e vídeos originais.
+
+Ao escolher a pasta, o sistema atualiza a galeria e reconstrói os cartões de
+medidas. A janela de seleção começa na pasta já informada ou em Downloads.
+
+
+3.3 Destino
+------------
+
+É a pasta-base onde será criada a pasta final do produto.
+
+O destino é usado durante o salvamento, mas o valor da proporção não é gravado
+na tabela A_ENTRADA. O destino final gravado no banco é a pasta do produto,
+não apenas a pasta-base.
+
+
+3.4 Descrição
+--------------
+
+É um campo de texto longo. É obrigatório para salvar.
+
+Pode ser preenchido manualmente ou por transcrição de voz. A gravação continua
+mesmo durante pausas; clique novamente em “Parar gravação” para encerrar e
+transcrever. Quando concluída, a transcrição é acrescentada ao texto já digitado.
+
+
+3.5 Como pode ser usado
+------------------------
+
+É um campo de texto longo para serventia, uso ou aplicação prática.
+
+Pode ser preenchido manualmente ou por transcrição de voz. A gravação continua
+mesmo durante pausas; clique novamente em “Parar gravação” para encerrar e
+transcrever.
+
+
+3.6 Acompanha
+--------------
+
+É um campo de texto livre para informar itens que acompanham o produto.
+
+
+3.7 Acabamento
+---------------
+
+É uma seleção múltipla. As opções existentes no código são:
+
+    - lixado
+    - lavado
+    - Vernizado
+    - Impressão a Laiser
+    - Pode ser Estilizado pelo Cliente
+
+O valor salvo é uma lista transformada em texto, separada por vírgulas.
+
+
+3.8 Proporção
+--------------
+
+As opções existentes são:
+
+    - 3:4
+    - 1:1
+    - 4:5
+    - 9:16
+    - 16:9
+
+A proporção escolhida é aplicada durante o Cadastro, mas sem reduzir os pixels
+do produto. Uma tela branca com a proporção selecionada é montada ao redor da
+imagem, em um diretório temporário fora da pasta do produto; esse diretório é
+descartado ao terminar. Os ajustes visuais são aplicados em seguida e o único
+resultado persistente é:
+
+    a_ajuste_geral/
+        <imagem>.png
+
+a_ajuste_geral recebe somente PNGs gerados pelo Cadastro. Os JPEGs originais
+continuam fora dela, na raiz do produto. Como não há redução nem compressão
+JPEG nesta etapa, os PNGs podem ocupar mais espaço; a otimização fica para uma
+etapa posterior. Cada salvamento do Cadastro refaz esses PNGs usando a
+proporção escolhida naquele momento. Arquivos antigos que já existam na pasta
+não são removidos automaticamente.
+
+No fluxo atual, ela não é gravada na tabela A_ENTRADA para ser recuperada
+posteriormente pela Produção.
+
+
+===============================================================================
+4. CLASSIFICAÇÃO DO PRODUTO
+===============================================================================
+
+O campo Tipo possui duas opções:
+
+    - Único
+    - Kit
+
+Os demais controles ficam visíveis ou ocultos conforme essa escolha.
+
+
+4.1 Produto Único
+------------------
+
+Para produto único, o sistema mostra:
+
+    - Variações: de 1 até 9;
+    - Também em kit: Não ou Sim.
+
+Se Também em kit for Sim, aparecem:
+
+    - Peças no kit: de 2 até 10;
+    - Quantidade de kits: de 1 até 10.
+
+O campo Variação do kit não aparece para produto único.
+
+
+4.2 Produto Único sem kit
+--------------------------
+
+Configuração:
+
+    Tipo = Único
+    Também em kit = Não
+
+Com Variações = 1:
+
+    - todas as imagens são colocadas em um único grupo;
+    - um único cartão de medidas é criado;
+    - as medidas desse cartão são aplicadas a todas as imagens;
+    - o produtos.txt recebe uma linha para cada imagem.
+
+Com Variações maior que 1:
+
+    - as imagens são divididas em blocos;
+    - é criado um cartão por bloco;
+    - as medidas do cartão são aplicadas a todas as imagens do bloco.
+
+O cálculo usado é:
+
+    imagens_por_grupo = max(1, quantidade_de_imagens // quantidade_de_variacoes)
+
+Os primeiros grupos recebem imagens_por_grupo. O último grupo recebe o
+restante das imagens.
+
+Essa divisão é feita somente pela posição da imagem na lista. O sistema não
+identifica automaticamente cor, tamanho, modelo ou outra característica da
+variação.
+
+
+4.3 Produto Kit
+----------------
+
+Configuração:
+
+    Tipo = Kit
+
+Para um kit, o sistema usa:
+
+    Peças no kit
+    Variação do kit
+    Quantidade de kits
+
+Cada kit é considerado como:
+
+    1 foto do kit completo + fotos das peças individuais
+
+O cálculo é:
+
+    fotos_por_kit = 1 + peças_no_kit
+    fotos_esperadas = fotos_por_kit * quantidade_de_kits
+
+Exemplo:
+
+    Peças no kit = 3
+    Quantidade de kits = 2
+    Fotos esperadas = (1 + 3) * 2 = 8
+
+Os cartões são criados nesta ordem:
+
+    Kit completo 1
+    Kit 1 - peça 1
+    Kit 1 - peça 2
+    Kit 1 - peça 3
+    Kit completo 2
+    Kit 2 - peça 1
+    Kit 2 - peça 2
+    Kit 2 - peça 3
+
+No cadastro, cada imagem recebe um cartão próprio de medidas.
+
+O campo Variação do kit possui as opções:
+
+    - Sem variação
+    - Tamanho
+    - Cor
+    - Peso
+    - Mista
+
+Atualmente esse campo não altera a quantidade de imagens, cartões ou grupos.
+Ele é levado para a configuração gravada como o valor de VAR do kit.
+
+
+4.4 Produto Único também vendido em kit
+-----------------------------------------
+
+Configuração:
+
+    Tipo = Único
+    Também em kit = Sim
+
+O código presume que as mídias estejam nesta ordem:
+
+    [imagens do produto único] + [imagens dos kits]
+
+O tamanho reservado para os kits é:
+
+    tamanho_dos_kits = (1 + peças_no_kit) * quantidade_de_kits
+
+As últimas tamanho_dos_kits imagens são tratadas como imagens dos kits. As
+imagens anteriores são tratadas como imagens do produto único.
+
+A parte do produto único é dividida pelas variações. A parte dos kits é
+dividida em cartões individuais, uma imagem por cartão.
+
+Essa divisão também é posicional. O programa não sabe sozinho onde começa ou
+termina um kit.
+
+Se a quantidade de imagens for insuficiente, podem ser criados grupos vazios
+ou pode faltar correspondência entre imagens, cartões e linhas do TXT. Não há
+uma validação completa desse cenário antes do salvamento.
+
+
+===============================================================================
+5. MÍDIAS E ORDEM
+===============================================================================
+
+A área de imagens lista somente as imagens da pasta de origem. São elas que
+podem ser arrastadas para os grupos de variações e kits e que recebem medidas.
+
+Imagens:
+
+    - aparecem com prévia na orientação original, inclusive imagens verticais;
+    - participam da divisão de variações e kits;
+    - recebem medidas;
+    - participam do produtos.txt;
+    - são copiadas para a pasta do produto.
+
+Uma imagem associada a um grupo não desaparece da área de imagens. A mesma
+imagem pode ser associada a vários grupos, o que permite usar uma mesma capa
+em todas as variações ou kits. A mesma imagem não é repetida duas vezes dentro
+do mesmo grupo.
+
+Vídeos:
+
+    - aparecem em um painel separado, abaixo da área de imagens;
+    - aparecem como blocos com botão de reprodução;
+    - podem ser assistidos dentro da aplicação ao clicar no botão de play;
+    - ficam fora da área arrastável;
+    - são copiados para a pasta do produto;
+    - não participam dos cartões de medidas;
+    - não recebem linhas no produtos.txt.
+
+O texto de contagem das imagens fica junto da área de organização e orienta o
+arraste para o grupo correspondente. O painel compacto com o conteúdo do TXT
+fica acima das imagens e não repete um título grande.
+
+Ao salvar, a ordem completa das mídias é gravada em:
+
+    .ordem_midias.json
+
+Esse arquivo fica na pasta final do produto.
+
+Para imagens, o manifesto usa os nomes finais gerados pelo Cadastro. Para
+vídeos, usa os nomes originais, pois vídeos não recebem medidas.
+
+Existe uma diferença importante entre a galeria e a lista interna do cadastro:
+na atualização inicial, a galeria pode ordenar visualmente as mídias, mas a
+lista usada pelos cartões pode ainda estar na ordem original retornada pela
+pasta. A sincronização ocorre quando a ordenação é alterada ou quando uma
+mídia é movida manualmente.
+
+Por isso, a ordem das imagens precisa ser conferida antes do salvamento quando
+a posição das fotos for importante.
+
+5.1. ORGANIZAÇÃO VISUAL DA TELA
+--------------------------------
+
+Na coluna esquerda, os botões:
+
+    - Atualizar mídias;
+    - Processar cadastro;
+
+ficam logo abaixo do campo de descrição.
+
+Na área central de organização, a ordem visual é:
+
+    - painel compacto com a medida do TXT;
+    - contagem e área de imagens arrastáveis;
+    - painel separado com os vídeos encontrados.
+
+Os vídeos permanecem na lista completa do cadastro para serem copiados ao
+destino, mas não podem ser arrastados para grupos nem recebem medidas.
+
+Cada grupo exibe a função das imagens associadas:
+
+    - uma área pequena de CAPA, que aceita apenas uma imagem;
+    - uma faixa larga de FOTOS DE ÂNGULO, que aceita várias imagens;
+    - uma área pequena de MEDIDAS, que aceita apenas uma imagem.
+
+Cada área mostra a miniatura e o nome do arquivo associado. Capa e medidas
+podem ser substituídas arrastando outra imagem para o mesmo espaço. As fotos
+de ângulo são acumuladas na faixa horizontal. A mesma imagem pode ser usada
+em grupos diferentes, mas não ocupa duas funções dentro do mesmo grupo.
+
+
+===============================================================================
+6. CARTÕES DE MEDIDAS
+===============================================================================
+
+Cada cartão contém:
+
+    - altura;
+    - largura;
+    - espessura;
+    - peso.
+
+Ao lado dos campos de medida, o cartão mostra a miniatura da CAPA. Abaixo dos
+campos, mostra a faixa de FOTOS DE ÂNGULO e, ao lado dela, a miniatura da
+imagem de MEDIDAS.
+
+Os valores internos do cartão continuam sendo uma linha por imagem:
+
+    (arquivo, altura, largura, espessura, peso)
+
+As linhas são geradas na ordem CAPA, FOTOS DE ÂNGULO e MEDIDAS. Quando uma
+área ainda não recebeu imagem, ela exibe uma instrução de arraste em vez de
+uma miniatura.
+
+Os cartões são apagados e recriados quando muda:
+
+    - Tipo;
+    - Variações;
+    - Também em kit;
+    - Peças no kit;
+    - Variação do kit;
+    - Quantidade de kits;
+    - pasta de origem;
+    - ordem das mídias.
+
+Os valores digitados não são preservados durante essa reconstrução. Alterar a
+classificação depois de preencher medidas pode apagar os valores dos cartões.
+
+
+===============================================================================
+7. LEITURA DE TXT NA ORIGEM
+===============================================================================
+
+Quando a pasta de origem é atualizada, a camada Enhanced procura qualquer
+arquivo com extensão .txt na pasta.
+
+O nome não precisa ser produtos.txt. Quando existem vários TXT, o primeiro em
+ordem alfabética é escolhido.
+
+O formato esperado é:
+
+    altura x largura x espessura,peso
+
+Exemplo:
+
+    10x20x3,500
+    12x22x4,650
+
+Também são aceitos X e × como separadores das dimensões.
+
+Linhas vazias ou incompatíveis são ignoradas. O peso pode ficar vazio.
+
+O preenchimento automático usa:
+
+    - primeira imagem para produto único com uma variação;
+    - primeira imagem de cada bloco para produto único com várias variações;
+    - uma linha por imagem para kit;
+    - primeiras imagens das variações e todas as imagens do kit para único
+      também em kit.
+
+O número de linhas não é validado completamente contra o número de cartões.
+Se o TXT tiver menos linhas, alguns cartões permanecem vazios. Se tiver mais,
+as linhas extras não são usadas.
+
+O preenchimento é acionado ao atualizar a pasta ou ao alterar a ordem das
+mídias. A reconstrução causada somente por uma mudança de classificação não
+reaplica automaticamente o TXT.
+
+
+===============================================================================
+8. NOTAS HISTÓRICAS DO PLANEJAMENTO
+===============================================================================
+
+As subseções abaixo registram o planejamento original do Cadastro. A validação
+manual confirmou o salvamento organizado para duas variações; elas não são um
+bloqueio para considerar o Cadastro encerrado. Os próximos ajustes pertencem à
+Produção, principalmente a leitura do produtos.txt e a interpretação dos
+nomes finais para cada tipo de produto.
+
+O botão de salvamento exige:
+
+    - nome;
+    - origem;
+    - descrição;
+    - pelo menos uma imagem com dados coletáveis.
+
+O salvamento cria a pasta:
+
+    <destino>/<NOME_EM_MAIÚSCULAS>
+
+O arquivo produtos.txt é criado na raiz dessa pasta.
+
+Cada linha possui exatamente:
+
+    altura x largura x espessura,peso
+
+Na prática, o código escreve:
+
+    f"{altura}x{largura}x{espessura},{peso}"
+
+O arquivo não guarda o nome da imagem, o tipo da imagem, a variação, a peça
+ou o grupo. A associação depende exclusivamente da posição da linha em
+relação à ordem das imagens.
+
+Além do produtos.txt, é criado:
+
+    .ordem_midias.json
+
+As imagens coletadas são copiadas para o destino durante a escrita das linhas.
+Os vídeos são copiados em uma etapa separada.
+
+Campos de medida vazios não impedem necessariamente a criação do arquivo.
+Nesse caso podem ser geradas linhas incompletas.
+
+
+===============================================================================
+9. CONFIGURAÇÃO GRAVADA NO SQLITE
+===============================================================================
+
+O cadastro é salvo na tabela:
+
+    A_ENTRADA
+
+Campos principais:
+
+    PRODUTO
+    REFERENCIA
+    DIRETORIO
+    DESCRITION
+    SERVENTIA
+    ACOMPANHA
+    ACABAMENTO
+    KIT
+    OBS
+
+A chave do registro é PRODUTO. O salvamento usa INSERT OR REPLACE.
+
+A referência é gerada automaticamente a partir do nome. A configuração de
+tipo, variações e kits é gravada no campo KIT.
+
+Produto único sem kit:
+
+    TIPO:ÚNICO|VAR=2|KIT=NO
+
+Produto único com kit:
+
+    TIPO:ÚNICO|VAR=2|KIT=YES|PECAS=3|QTS_KITS=2
+
+Kit:
+
+    TIPO:KIT|PECAS=3|VAR=TAMANHO|QTS_KITS=2
+
+O parse_tipo_kit apenas separa as partes em um dicionário. Ele não valida a
+configuração nem calcula as quantidades.
+
+A proporção é usada na criação das pastas iniciais, mas não fica armazenada na
+configuração A_ENTRADA.
+
+
+===============================================================================
+10. COMO A PRODUÇÃO LÊ A ENTRADA
+===============================================================================
+
+A aba Criação carrega o último registro da tabela A_ENTRADA usando a ordem de
+inserção. Ela mostra:
+
+    - produto;
+    - pasta;
+    - configuração do campo KIT.
+
+A aba não carrega o produtos.txt ao ser aberta. A pipeline modular lê e valida
+o TXT durante executar_producao; os nomes finais já fornecidos pelo Cadastro
+são preservados e não são renomeados novamente. Para o tratamento de imagem,
+a pipeline ativa usa os PNGs de a_ajuste_geral; os JPEGs da raiz permanecem como
+originais do Cadastro.
+
+    Durante a produção atual:
+
+    A_ENTRADA.KIT
+        -> validação do .ordem_midias.json
+        -> validação do produtos.txt
+        -> conferência das medidas no nome final
+        -> separação dos grupos pelo prefixo do nome
+        -> tratamentos visuais
+
+A Produção não chama mais o renomeador antigo para o fluxo ativo. Os nomes
+gerados pelo Cadastro são preservados.
+
+Dentro de cada grupo:
+
+    primeira imagem
+        -> capa/amostra
+
+    imagens entre a primeira e a última
+        -> variações da amostra
+
+    última imagem
+        -> imagem de medidas
+
+Se um grupo tiver apenas uma imagem, ela é usada como amostra e como imagem de
+medidas, pois ocupa simultaneamente a primeira e a última posição.
+
+As formas de venda disponíveis na tela são derivadas da configuração salva:
+
+    - produto único sem kit: Peça única;
+    - produto único também vendido em kit: Peça única e Kit: N;
+    - produto do tipo kit: Kit: N.
+
+Essas opções registram a intenção comercial da produção em formas_venda.json.
+Elas não alteram a identificação dos arquivos nem refazem grupos.
+
+
+===============================================================================
+11. COMO AS MEDIDAS CHEGAM ÀS IMAGENS FINAIS
+===============================================================================
+
+O fluxo atual é:
+
+    Cadastro
+        -> nome final com grupo, sequência, medidas e peso
+        -> produtos.txt usado para conferência
+        -> .ordem_midias.json usado como ordem oficial
+        -> módulo de desenho lê as medidas do nome
+        -> imagem final com as medidas desenhadas
+
+O módulo Colocar_medidas extrai do nome da imagem valores como:
+
+    altura
+    largura ou diâmetro
+    espessura ou comprimento
+    peso
+
+O tipo do kit continua influenciando o desenho da terceira medida. A relação
+entre foto e medida, porém, não é mais reconstruída pelo TXT ou pelo
+renomeador: ela já vem consolidada no nome e na posição da imagem dentro do
+grupo salvo pelo Cadastro.
+
+
+===============================================================================
+12. CONTEXTO ENVIADO À IA
+===============================================================================
+
+O Cadastro é conectado automaticamente ao painel lateral de IA.
+
+O snapshot enviado pode conter:
+
+    - nome;
+    - nome legado;
+    - referência;
+    - diretório de destino;
+    - diretório-base;
+    - origem das mídias;
+    - descrição;
+    - serventia;
+    - acompanha;
+    - acabamento;
+    - proporção;
+    - tipo;
+    - variações;
+    - também em kit;
+    - peças no kit;
+    - variação do kit;
+    - quantidade de kits;
+    - lista de arquivos;
+    - quantidade de arquivos;
+    - medidas dos cartões;
+    - nome do TXT encontrado na origem;
+    - conteúdo do TXT da origem;
+    - registro correspondente da tabela A_ENTRADA;
+    - estado de salvamento.
+
+O conteúdo do TXT da origem é limitado a aproximadamente 20.000 caracteres.
+
+O produtos.txt da pasta de destino não é carregado automaticamente como um
+arquivo separado para a IA. O contexto contém as medidas dos cartões e o TXT
+encontrado na origem.
+
+Antes de o produto ser salvo, a conversa fica associada a um rascunho.
+Depois do salvamento, o identificador passa a ser o nome do produto e a
+conversa fica persistida no AppData.
+
+A implementação atual da memória da IA usa arquivos JSON e JSONL dentro do
+AppData. Alguns documentos antigos mencionam tabelas de memória no SQLite, mas
+essa não é a implementação ativa encontrada em ia_memory_appdata.py.
+
+
+12.1 Permissões da IA
+----------------------
+
+A IA pode preencher ou alterar somente:
+
+    - nome;
+    - descrição;
+    - serventia.
+
+A IA pode recomendar, mas não alterar diretamente:
+
+    - tipo;
+    - variações;
+    - acabamento;
+    - também em kit;
+    - peças no kit;
+    - variação do kit;
+    - quantidade de kits.
+
+A IA não pode alterar:
+
+    - origem;
+    - destino;
+    - proporção.
+
+Alterações de texto devem virar uma proposta e aguardar confirmação visual.
+
+Arquivos de texto anexados à conversa são lidos parcialmente. Arquivos não
+textuais são apenas identificados pelo nome e ainda não são analisados
+visualmente.
+
+
+===============================================================================
+13. REGRAS EFETIVAMENTE IMPLEMENTADAS
+===============================================================================
+
+Estão presentes no fluxo atual:
+
+    - cadastro PySide6;
+    - produto único;
+    - produto único com variações;
+    - produto único também vendido em kit;
+    - kit com peças;
+    - quantidade de kits;
+    - seleção de variação do kit;
+    - galeria de imagens e vídeos;
+    - reordenação manual;
+    - cartões de medidas;
+    - leitura parcial de TXT da origem;
+    - criação de produtos.txt;
+    - criação de .ordem_midias.json;
+    - cópia das mídias;
+    - renomeação das imagens com grupo, sequência, medidas e peso;
+    - reutilização da mesma imagem em grupos diferentes;
+    - persistência em A_ENTRADA;
+    - criação das pastas iniciais;
+    - leitura do último cadastro pela Produção;
+    - envio do snapshot do cadastro para a IA;
+    - memória de rascunho e memória de produto.
+
+
+===============================================================================
+14. LIMITAÇÕES E PONTOS A CONFIRMAR
+===============================================================================
+
+Ainda precisam de confirmação ou revisão:
+
+    - validação das medidas quando os cartões são refeitos em classificações
+      ainda não testadas;
+    - validação da quantidade de imagens de cada cenário;
+    - validação completa da quantidade de linhas do TXT no cadastro;
+    - escolha segura quando existem vários arquivos TXT;
+    - sincronização inicial entre a ordem visual e a ordem interna;
+    - separação real das fotos no cenário único com kit;
+    - uso efetivo de QTS_KITS na produção;
+    - uso efetivo das opções de kit da aba Criação;
+    - armazenamento e recuperação da proporção;
+    - leitura completa do produtos.txt pela aba Criação;
+    - identificação de variações ou peças por dados próprios, em vez de posição;
+    - análise visual de imagens pela IA;
+    - execução real com PySide6 e dependências de mídia no computador final.
+
+O ponto central do cadastro atual é que a associação entre fotos, variações,
+peças, kits e medidas é feita na organização dos grupos da tela. O produtos.txt
+registra as medidas e o peso em uma linha por imagem, enquanto o
+.ordem_midias.json registra os nomes finais que serão consumidos pela Produção.
+
+
+===============================================================================
+15. ARQUIVOS PRINCIPAIS RELACIONADOS À ENTRADA
+===============================================================================
+
+Tela e integração:
+
+    _APP_/cadastro/App_Cadastro_Prod_PySide6.py
+    _APP_/cadastro/App_Cadastro_Prod_PySide6_Enhanced.py
+    _APP_/App_Janela_PySide6.py
+    _APP_/main_window.py
+
+Regras compartilhadas:
+
+    _APP_/PySide6_core.py
+
+Persistência:
+
+    _BANCOS_/Banco_Bados.py
+    Base_Dados.db através do núcleo da aplicação
+
+Renomeação e consumo do TXT:
+
+    Tratar_midias/e__Renomeie_IMG.py
+
+Desenho das medidas:
+
+    Tratar_midias/f__Medidas_Graficos.py
+
+Contrato do contexto da IA:
+
+    _IAS_/Ferramentas/campos_cadastro.py
+    _IAS_/Ferramentas/cadastro_adapter.py
+    _IAS_/Ferramentas/leitura_cadastro.py
+    _IAS_/Painel_IA_PySide6.py
+    _IAS_/ia_memory_appdata.py
+
+
+===============================================================================
+16. ENCERRAMENTO DO CADASTRO E PRÓXIMA ETAPA
+===============================================================================
+
+O Cadastro deve ser tratado como concluído para o fluxo validado. Não é
+necessário voltar ao documento antigo da pipeline para interpretar a entrada.
+A referência atual está neste documento, em _APP_/_DOC_APP.txt,
+_APP_/_STATUS_APP.txt e nos documentos de estado do núcleo.
+
+A Produção deve começar lendo o resultado já salvo, sem voltar a associar o TXT
+de origem por posição. Ela precisa trabalhar com:
+
+    - a pasta final do produto;
+    - produtos.txt;
+    - .ordem_midias.json;
+    - nomes finais das imagens;
+    - vídeos;
+    - configuração de tipo, variações e kits em A_ENTRADA.

@@ -1,0 +1,399 @@
+# 📁 _APP_/_DOC_APP.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+APP — DOCUMENTAÇÃO DO MÓDULO
+Última atualização: 2026-11-09
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ESTADO ATUAL
+────────────
+O módulo _APP_ contém a interface desktop PySide6 do hen-place-control.
+Cadastro, Criação, Resultados e Medidas avulsas são agrupados na área Cadastro;
+Anúncios, Anunciar, Sociais e Registros ficam em Marketplace; Registrar vendas
+e Histórico ficam na área Vendas; e Configurações, Prompts e Banco de dados
+ficam em Configuração. A janela troca as abas horizontais pela barra vertical
+à esquerda, na ordem Cadastro, Marketplace, Vendas e Configuração. A pipeline continua em
+producao/ como serviço de Criação, não como uma aba visível. A versão histórica
+em Streamlit continua preservada como referência de regras.
+
+O Cadastro já salva grupos, medidas, pesos, nomes finais e a ordem das mídias.
+A Criação consome essa saída e não deve reconstruir a associação entre imagem e
+medida a partir do produtos.txt. Resultados apresenta as saídas e a preparação
+manual das cópias para marketplace.
+
+A validação visual da interface, da prévia/impressão de etiquetas, da Produção
+e da aba Medidas avulsas no computador Windows de destino ainda está pendente.
+As verificações desta etapa foram estáticas; a aplicação e o processamento
+pesado não foram iniciados nesta IDE.
+
+
+OBJETIVO
+─────────
+O módulo _APP_ organiza:
+
+    - a janela principal e a navegação entre abas;
+    - o Cadastro de produtos;
+    - a Criação e a tela Resultados;
+    - o processamento avulso de imagens e vídeos;
+    - os Registros de vendas e marketplace;
+    - os Prompts;
+    - as Configurações da loja e suas mídias;
+    - o painel lateral de IA;
+    - as tarefas em segundo plano;
+    - a comunicação com o SQLite e as pastas de mídia.
+
+
+RESPONSABILIDADES
+─────────────────
+    - Coletar produto, variações, kits, mídias e medidas.
+    - Exibir mídias e cartões de medidas no Cadastro.
+    - Salvar o cadastro no SQLite e gerar produtos.txt.
+    - Salvar .ordem_midias.json com a ordem oficial das mídias.
+    - Carregar o cadastro mais recente na Criação.
+    - Exibir as imagens do manifesto na ordem salva pelo Cadastro.
+    - Permitir escolher o fundo de capa na Criação e definir o fundo
+      ativo de medidas em Configurações.
+    - Exibir saídas em faixas horizontais amplas na aba Resultados.
+    - Preparar título e descrição do anúncio e configurar marketplaces,
+      preço, custo e quantidade por ID na aba Anúncio.
+    - Preparar textos para redes sociais e escolher mídias para publicação
+      manual na aba Sociais.
+    - Gerar prévia e imprimir etiquetas para as unidades configuradas.
+    - Registrar vendas concluídas na aba Vendas, baixando unidades existentes
+      em MARKET_PLACE e consultando o histórico por unidade.
+    - Permitir escolher a faixa de música da Criação.
+    - Processar imagens e vídeos avulsos, em segundo plano, sem alterar o
+      cadastro, produtos.txt ou o manifesto oficial de mídias.
+    - Copiar mídias próprias para as pastas do AppData, sem depender da pasta
+      Midias do projeto.
+    - Carregar Midias/icone.ico como ícone do aplicativo.
+    - Exibir Midias/logo.png na navegação principal quando estiver disponível.
+    - Salvar perfil social e link da loja no config.json do AppData.
+    - Mostrar produto, pasta e configuração em um cabeçalho compacto.
+    - Abrir a pasta do produto pelo explorador do sistema.
+    - Explicar campos, opções e ações com tooltips.
+    - Executar tarefas demoradas fora da thread principal.
+    - Exibir progresso, logs e erros de tarefas ao usuário.
+    - Exibir VENDAS, MARKET_PLACE, Prompts e o painel de IA.
+
+
+ARQUIVOS ATIVOS E HISTÓRICOS
+────────────────────────────
+_APP_/main_window.py
+    Janela real usada pelo aplicativo; integra as áreas Cadastro, Configuração
+    e Marketplace em abas próprias e mantém o painel de IA. A barra à esquerda
+    prefere Midias/logo.png, usa o ícone do aplicativo como alternativa e
+    apresenta uma marca textual se nenhum dos arquivos estiver disponível.
+
+_APP_/Cadastro/
+_APP_/Marketplace/
+_APP_/Vendas/
+_APP_/Configuracao/
+    Pacotes de entrada das áreas principais e suas subpastas. main_window.py
+    instancia os workspaces e as telas por esses caminhos em maiúsculas. As
+    pastas antigas em minúsculas permanecem como origem das implementações
+    compatíveis enquanto os imports legados existirem.
+
+_CONFIGURA_/__init__.py
+    Resolve o caminho de Midias/icone.ico, usado como ícone do aplicativo.
+
+_APP_/midias_avulsas/App_Midias_Avulsas_PySide6.py
+    Interface ativa para escolher arquivos, medidas e pasta de destino.
+
+_APP_/midias_avulsas/processor.py
+    Reutiliza os tratamentos existentes para imagens e vídeos, salvando cópias
+    sem alterar a pasta de entrada ou os dados oficiais do produto.
+    Vídeos sem áudio original podem receber somente a faixa de música escolhida.
+
+_APP_/midias_avulsas/_DOC_MIDIAS_AVULSAS.txt
+    Contrato, pastas de saída e limites da aba.
+
+_APP_/App_Janela_PySide6.py
+    Arquivo histórico com definições repetidas de janela e abas. Não deve ser
+    usado para decidir sozinho qual implementação da aba Criação está ativa.
+
+_APP_/anuncio/App_Anuncio_PySide6.py
+    Entrada ativa da aba Anúncio, integrada à janela principal depois de
+    Resultados.
+
+_APP_/anuncio/Controller_Anuncio_PySide6.py
+    Controlador dos prompts, rascunhos e preparação comercial do anúncio.
+    Incorpora o controlador de marketplaces e a impressão de etiquetas.
+
+_APP_/anuncio/_DOC_ANUNCIO.txt
+    Contrato da aba Anúncio e do fluxo manual de IA.
+
+_APP_/vendas/App_Vendas_PySide6.py
+    Entrada ativa da aba Vendas realizadas: seleção do estoque disponível,
+    registro de comprador/plataforma/taxa e consulta do histórico.
+
+_APP_/vendas/Controller_Vendas_PySide6.py
+    Controlador da configuração comercial por ID e das etiquetas, reutilizado
+    dentro de Anúncio. Não é o controlador do formulário de venda realizada.
+
+_APP_/vendas/_DOC_VENDAS.txt
+    Contrato de integração, campos e persistência da aba Vendas.
+
+_APP_/Marketplace/Sociais/App_Sociais_PySide6.py
+    Entrada ativa da aba Sociais, posicionada entre Anunciar e Registros na
+    área Marketplace.
+
+_APP_/Marketplace/Sociais/Controller_Sociais_PySide6.py
+    Seleciona somente produtos concluídos de PRODUTOS_ATIVOS e prepara blocos
+    copiáveis para Pinterest, Instagram, Facebook, TikTok e YouTube Shorts;
+    permite escolher mídia local e usa os textos de Anúncio salvos.
+
+_APP_/Marketplace/Sociais/_DOC_SOCIAIS.txt
+    Contrato da geração textual e da seleção manual de mídias, sem publicação
+    por API.
+
+_APP_/criacao/App_Criacao_PySide6.py
+    Entrada ativa da aba Criação. A janela principal importa CreationTab por
+    este pacote.
+
+_APP_/criacao/Controller_Criacao_PySide6.py
+    Controlador ativo da Criação: cadastro atual, configurações, terminal,
+    progresso, tarefas em segundo plano e ações compartilhadas com Resultados.
+
+_APP_/criacao/_DOC_CRIACAO.txt
+    Contrato e integração da aba Criação.
+
+_APP_/resultados/App_Resultados_PySide6.py
+    Montagem visual ativa da aba Resultados: galerias, prévia do vídeo e
+    preparação F/G em faixas horizontais, sem caixas aninhadas.
+
+_APP_/resultados/_DOC_RESULTADOS.txt
+    Contrato de layout, ações e integração da aba Resultados.
+
+_APP_/producao/App_Producao_PySide6.py
+    Shim de compatibilidade para importadores históricos. A classe ativa foi
+    movida para _APP_/criacao/Controller_Criacao_PySide6.py.
+
+_APP_/producao/pipeline.py
+    Pipeline ativa de processamento. Recebe as opções da Criação, valida o
+    pacote do Cadastro e reaproveita os módulos de tratamento visual.
+
+_APP_/producao/_DOC_PRODUCAO_PIPELINE.txt
+    Contrato detalhado do processamento de mídias e documento de continuidade.
+
+_APP_/cadastro/App_Cadastro_Prod_PySide6.py
+    Implementação histórica/base do Cadastro, com definições antigas
+    preservadas.
+
+_APP_/cadastro/App_Cadastro_Prod_PySide6_Enhanced.py
+    Camada ativa que ajusta a galeria, os grupos e a organização das medidas.
+
+_APP_/cadastro/_DOC_ENTRADA_CADASTRO.txt
+    Contrato da entrada, dos grupos e dos arquivos gerados pelo Cadastro.
+
+_APP_/PySide6_core.py
+    SQLite, Cadastro, cópia de mídias, criação de pastas, auxiliares e
+    TaskWorker/BackgroundMixin. Também contém cópias históricas da Produção;
+    elas não substituem a pipeline modular.
+
+
+FLUXO PRINCIPAL
+───────────────
+main.py
+    → init_database()
+    → QApplication
+    → MainWindow
+    → abas Cadastro, Criação, Resultados, Anúncio, Vendas,
+      Sociais, Registros, Prompts e Configurações
+
+CadastroTab
+    → escolhe origem e destino
+    → organiza imagens em grupos
+    → coleta medidas e peso por ocorrência
+    → salvar_cadastro_task()
+    → A_ENTRADA + produtos.txt + .ordem_midias.json
+    → Ajuste_Geral e pastas iniciais
+
+Criação (CreationTab)
+    → lê o último registro de A_ENTRADA
+    → mostra as mídias na ordem do manifesto
+    → permite escolher fundo de capa e recursos de processamento
+    → consulta o fundo de medida ativo definido em Configurações
+    → coleta sombra, volume, tipo de medidas e formas de venda
+    → executa producao.pipeline.executar_producao() em TaskWorker
+    → mantém terminal e progresso visíveis; abre Resultados ao concluir
+
+Resultados (resultados.build_results_page)
+    → exibe Sem fundo em largura total
+    → organiza Fundo branco e Fundo capa lado a lado
+    → dá mais largura a Medidas e reserva uma coluna compacta ao Vídeo Shopee
+    → organiza F · Pré-marketplace e G · Marketplace pronto em duas colunas
+    → oferece prompts e prévias para preparação manual das imagens
+
+Área Cadastro (CadastroTab + MidiasAvulsasTab e telas de preparação)
+    → contém as abas Cadastro, Criação, Revisar mídias, Montar anúncio e
+      Medidas avulsas; as etapas de preparação dependem de produto pendente
+    → Medidas avulsas usa a pasta do produto ou outra pasta como destino
+    → processa imagens com ajuste, remoção de fundo, branco e medidas
+    → converte vídeo com a receita, música e recursos já usados pela Criação
+    → cria/reutiliza no destino b_sem_fundo, c_fundo_branco, d_medidas e
+      F_video_shopee; não cria outra pasta de produto
+    → mantém os originais e não sobrescreve saídas existentes
+    → não atualiza A_ENTRADA, produtos.txt ou .ordem_midias.json
+
+Anúncio (anuncio.AnuncioTab)
+    → usa o produto ativo de Criação/Resultados
+    → gera sugestões em texto no painel de IA; o usuário revisa e copia
+    → mantém título/descrição como rascunho por produto durante a sessão
+    → configura marketplaces, preço, custo e quantidade para os IDs já gerados
+    → salva dados comerciais e texto revisado no SQLite existente
+    → mostra prévia e imprime uma etiqueta por unidade configurada
+
+Vendas (vendas.VendasTab)
+    → registra quantidade, cliente, CPF, telefone, endereço, marketplace e taxa
+    → marca as linhas vendidas em MARKET_PLACE; elas deixam de contar no estoque
+    → consulta uma linha de histórico por unidade, sem ID/data de transação
+    → não altera o esquema SQLite nem usa VENDAS como histórico de transações
+
+Sociais (sociais.SociaisTab)
+    → seleciona somente produtos concluídos em PRODUTOS_ATIVOS
+    → usa fatos e caminhos do produto permanente e os textos salvos do anúncio
+    → não lista produtos pendentes de A_ENTRADA
+    → gera texto, palavras-chave e hashtags por rede usando o painel de IA
+    → mantém um bloco editável/copiável por Pinterest, Instagram, Facebook,
+      TikTok e YouTube Shorts
+    → escolhe uma imagem ou vídeo local por rede, sem enviar a mídia à IA
+    → publicação e upload são manuais; rascunhos antigos precisam ser gerados
+      novamente após salvar mudanças em Anúncio e não são persistidos
+
+ConfiguracoesTab
+    → edita perfil social e link da loja
+    → importa mídias por categoria, copiando-as para AppData/midias/
+    → sinaliza mudanças para Criação atualizar seus seletores
+
+RecordsTab
+    → consulta VENDAS e MARKET_PLACE
+    → exibe os registros persistidos
+
+PromptsTab
+    → edita os prompts por escopo do catálogo em AppData
+    → mostra quatro prompts históricos de _FERRAMENTAS_/Prompts.py para cópia
+    → inclui o texto-base externo de pesquisa da aba Anúncio em sistema.json
+    → a implementação ativa está em _APP_/prompts/App_Prompts_PySide6.py
+    → a janela principal seleciona CatalogPromptsTab antes de construir as abas
+
+
+CONTRATO DA PRODUÇÃO
+────────────────────
+A tela modular não deve usar a ordem alfabética nem a ordem do sistema como
+substitutas do manifesto. A ordem vem de:
+
+    <pasta do produto>/.ordem_midias.json
+
+O arquivo contém nomes finais das imagens e nomes originais dos vídeos.
+As imagens finais são preservadas. O produtos.txt é usado para conferência de
+quantidade, medidas e pesos, não para reconstruir o vínculo imagem/medida.
+
+Para cada grupo:
+
+    primeira imagem  → amostra/capa;
+    imagens do meio  → variações;
+    última imagem    → medida.
+
+Se o grupo tiver uma imagem, ela é usada tanto como amostra quanto como medida.
+
+
+RECURSOS VISUAIS
+────────────────
+A versão Streamlit usava _FERRAMENTAS_/Previews.py::Grerar_prev(), que mostrava
+selectbox e imagem para:
+
+    - logo*;
+    - capa*;
+    - medida*.
+
+A aba Configurações copia os recursos do usuário para categorias dentro do
+AppData e mantém o fundo ativo de medida em config.json. A Produção exibe
+seletores com miniaturas para logo e fundo de capa, mostra a prévia do fundo de
+medida definido em Configurações e oferece um seletor de faixa de música. A
+pipeline resolve esses recursos dentro da categoria correspondente do AppData.
+
+Fundos de capa e medida são obrigatórios quando precisam ser gerados; uma logo
+ausente permite gerar imagens sem logo. O fundo branco é exigido apenas quando
+a etapa Fundo_Banco precisa ser criada. Logo e QR de vídeo são overlays
+opcionais. A identidade salva no config.json fornece o texto social das imagens
+e o link exibido no vídeo. Com volume zero, a conversão não adiciona música.
+
+
+TAREFAS E SINAIS
+────────────────
+TaskWorker
+    Executa uma função em segundo plano, injeta progress=self.progress.emit,
+    registra início/fim e envia traceback por failed quando ocorre exceção.
+
+BackgroundMixin.start_task()
+    Cria o worker/thread, conecta os sinais e mantém a referência da tarefa.
+
+TaskWorker.progress(str)
+    Envia mensagens de andamento para a tela. O controlador usado por CreationTab conecta essas
+    mensagens ao painel de log e ao logger compartilhado.
+
+TaskWorker.finished(object)
+    Informa o resultado da tarefa.
+
+TaskWorker.failed(str)
+    Informa o traceback completo para o tratamento visual de erro.
+
+
+TRATAMENTO DE FUNDO E COMPATIBILIDADE
+─────────────────────────────────────
+Tratar_midias/c__Remove_Refina_IMG.py tenta usar PyTorch/CUDA quando disponível.
+Se o carregamento da DLL do PyTorch/CUDA falhar, usa rembg com
+CPUExecutionProvider e OpenCV para refinar a máscara.
+
+As prévias usam CPUExecutionProvider explicitamente, evitando depender de
+TensorRT/CUDA para a geração da prévia.
+
+O erro observado no computador de destino foi WinError 127 ao carregar
+cudnn_cnn_train64_8.dll, seguido de falha do provedor TensorRT do onnxruntime.
+Isso é uma incompatibilidade binária da aceleração, não uma falha da associação
+entre produto, imagem e logo. O fallback CPU foi implementado, mas ainda precisa
+ser validado em execução no computador de destino.
+
+
+INTEGRAÇÕES
+────────────
+    - SQLite em _BANCOS_/Base_Dados.db.
+    - A_ENTRADA, VENDAS e MARKET_PLACE.
+    - Tratar_midias para imagens e vídeos.
+    - _APP_/prompts/App_Prompts_PySide6.py para a aba ativa Prompts.
+    - _FERRAMENTAS_/ia_prompt_catalogo.py para catálogo, referências e
+      sistema.json; Prompts.py fornece padrões e referências históricas.
+    - _FERRAMENTAS_/Impressora.py para prévia e impressão de etiquetas.
+    - _FERRAMENTAS_/_Qantidades_Variations.py para regras auxiliares.
+    - _IAS_/ia_config.py, ia_service.py, ia_memory.py e Painel_IA_PySide6.py.
+    - _APPDATA_ para configurações locais da IA.
+
+O painel de IA pode usar Ollama, OpenRouter ou endpoint compatível configurado
+localmente. Credenciais não devem ser gravadas no código nem exibidas em logs.
+
+
+REGRAS
+──────
+    - Não remover a versão Streamlit original.
+    - Não criar uma aplicação web, React, Vite ou backend novo para este projeto.
+    - Manter SQLite como banco local.
+    - Não bloquear a thread principal com cópia, imagens, vídeo ou IA.
+    - Preservar a configuração compatível com parse_tipo_kit.
+    - Não usar produtos.txt para reconstruir grupos ou vínculos de medidas.
+    - Usar .ordem_midias.json como ordem oficial da Produção.
+    - Não chamar renomear_por_config() na pipeline nova.
+    - Não apagar módulos históricos antes de confirmar seus consumidores.
+    - Mostrar erros de tarefa no log e em mensagem visível.
+    - A aba Sociais não publica, não usa APIs e não persiste os textos gerados.
+    - Não enviar imagens ou vídeos do produto ao painel de IA pela aba Sociais.
+    - Não executar processamento pesado sem autorização quando essa restrição
+      estiver definida no ambiente de trabalho.
+
+
+VERIFICAÇÃO DESTA ATUALIZAÇÃO
+──────────────────────────────
+    - Os documentos foram consolidados para remover cópias concatenadas.
+    - O fluxo ativo foi conferido nos arquivos da aba modular e da pipeline.
+    - A aplicação não foi iniciada.
+    - O processamento de imagens, vídeo, áudio, GPU e PySide6 não foi executado.
+    - A validação manual no computador Windows de destino continua pendente.

@@ -1,0 +1,72 @@
+HEN-PLACE-CONTROL — MÍDIAS AVULSAS
+Última atualização: 2026-11-08
+
+OBJETIVO
+--------
+A subaba “Medidas avulsas”, dentro de Cadastro, trata imagens e vídeos sem
+iniciar a Criação completa. Pode-se selecionar um produto já cadastrado como
+destino ou escolher qualquer outra pasta.
+
+O destino selecionado continua sendo a pasta raiz do produto ou a pasta escolhida
+pelo usuário; não é criada outra pasta de produto. Todos os resultados do fluxo
+avulso ficam agrupados em:
+
+    <pasta escolhida>/H_Arq_avulsas/
+
+O fluxo é somente de processamento e cópia: não altera A_ENTRADA, produtos.txt
+nem .ordem_midias.json. Os novos arquivos não passam a fazer parte da ordem
+oficial usada pela Criação.
+
+IMAGENS
+-------
+O usuário seleciona uma ou mais imagens do mesmo produto e informa altura,
+largura/diâmetro e, conforme o tipo, espessura ou comprimento. O peso é opcional.
+Todas as imagens de uma rodada recebem as mesmas medidas.
+
+O processamento reutiliza Ajuste_IMG, Remove_IMG e Colocar_medidas:
+
+    imagem selecionada
+        → ajuste de aparência
+        → remoção/refino do fundo
+        → composição com fundo branco
+        → desenho das medidas informadas
+
+As subpastas abaixo são criadas quando necessário e reutilizadas nas próximas
+execuções. Isso também vale quando o destino selecionado é uma pasta qualquer:
+
+    <pasta escolhida>/H_Arq_avulsas/b_sem_fundo/
+    <pasta escolhida>/H_Arq_avulsas/c_fundo_branco/
+    <pasta escolhida>/H_Arq_avulsas/d_medidas/
+
+O fundo de medida pode ser branco puro ou um arquivo cadastrado em Configurações.
+Os nomes de saída incluem as medidas necessárias ao gerador gráfico existente.
+Arquivos que já existem nunca são substituídos; o fluxo escolhe outro nome.
+
+VÍDEO
+-----
+O usuário escolhe um vídeo, uma faixa cadastrada em Configurações (opcional) e
+o volume. Vídeos sem áudio original também são aceitos: podem sair sem áudio ou
+receber somente a música escolhida. O conversor existente aplica o tratamento
+visual, música, logo e QR Code cadastrados quando disponíveis, além dos limites
+de 30 MB e 59 segundos usados pela Criação. Se a compressão não atingir 30 MB,
+a aba informa a falha e não salva uma cópia acima do limite.
+
+    <pasta escolhida>/H_Arq_avulsas/F_video_shopee/
+
+O vídeo original não é alterado. Arquivos de saída existentes são preservados.
+
+MEDIDAS E MEMÓRIA DA GPU
+------------------------
+Para imagens PNG com transparência, a caixa do produto é calculada pelo canal
+alfa já produzido na remoção de fundo, sem executar uma segunda inferência ONNX.
+Para imagens sem transparência, a detecção reutiliza a sessão de remoção de fundo
+quando disponível; se a GPU ficar sem memória, repete essa detecção na CPU.
+
+THREADS E VALIDAÇÃO
+-------------------
+O trabalho pesado roda por BackgroundMixin/TaskWorker, fora da thread da
+interface. Erros e progresso são exibidos na própria aba.
+
+Esta implementação foi conferida estaticamente. O aplicativo PySide6 e os
+tratamentos com rembg, OpenCV e FFmpeg não foram executados neste ambiente. A
+validação com arquivos reais deve ser feita no computador Windows de destino.

@@ -1,0 +1,42 @@
+ABA VENDAS — REGISTRO DE VENDAS REALIZADAS
+==========================================
+
+ESTADO ATUAL
+------------
+- A aba ativa está montada em _APP_/vendas/App_Vendas_PySide6.py e integrada
+  pela janela _APP_/main_window.py.
+- A tela PySide6 tem formulários separados para registrar uma venda e consultar
+  unidades vendidas.
+- O registro permite selecionar um ID com estoque disponível, quantidade,
+  cliente, CPF, telefone, endereço, marketplace (Site, Shopee, Amazon ou
+  Mercado Livre) e taxa por unidade.
+- O resumo mostra o total bruto e o lucro total estimado para a quantidade
+  selecionada; a taxa informada é por unidade. O histórico também mostra o
+  lucro calculado por unidade.
+- Preparar oferta, configurar marketplaces/preço/custo/estoque e imprimir
+  etiquetas ficou na aba Anúncio.
+
+REFERÊNCIA DO FLUXO ANTIGO
+--------------------------
+- A versão Streamlit encaminha “Registro Compras” para
+  Gerar_Documentos/c__Dando_Baixa.py::Atualizamdo_registros.
+- O formulário legado usa listar_produtos_disponiveis() e registrar_compra()
+  de _BANCOS_/Banco_Bados.py para selecionar unidades ainda disponíveis e
+  registrar quantidade, nome, CPF, telefone, endereço, marketplace e taxa.
+- O fluxo PySide6 mantém essa regra nos dados atuais do app: cada linha
+  disponível de MARKET_PLACE representa uma unidade; registrar a venda marca as
+  linhas escolhidas com os dados do cliente. A contagem de estoque exclui essas
+  unidades nas próximas consultas.
+- VENDAS é a relação de IDs produzidos, refeita pelo pipeline de Produção. Não
+  use essa tabela como histórico de transações.
+- A consulta de histórico lista uma linha por unidade vendida. Os registros
+  legados não contêm um identificador nem uma data específicos da transação.
+
+SEGURANÇA DE DADOS
+------------------
+- Não há migração de esquema nem criação de um banco novo.
+- A preparação do anúncio não reduz nem exclui unidades.
+- O registro valida o estoque disponível dentro de uma transação SQLite e
+  atualiza as unidades e os dados do cliente atomicamente.
+- O código está integrado estaticamente; a validação visual e operacional deve
+  ser feita no computador desktop de destino, conforme as restrições do projeto.

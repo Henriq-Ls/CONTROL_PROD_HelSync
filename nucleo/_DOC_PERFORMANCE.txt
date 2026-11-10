@@ -1,0 +1,132 @@
+# hen-place-control/nucleo/_DOC_PERFORMANCE.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HEN-PLACE-CONTROL — LOG DE PERFORMANCE
+Última atualização: 2026-09-10 (Sessão [INFORMAÇÃO NÃO CONFIRMADA]: correção do microfone e logs)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ESTADO RÁPIDO — Sessão [INFORMAÇÃO NÃO CONFIRMADA] (2026-09-10)
+───────────────────────────────────────────────────────────────
+Interface PySide6             ⚠️ RISCO   execução visual não confirmada neste ambiente
+Tarefas de cadastro            ✅ OK      TaskWorker/QThread presentes no código
+Tarefas de produção            ✅ OK      executar_producao é disparada em segundo plano
+Microfone                     ⚠️ RISCO   fluxo corrigido e com logs; captura física ainda não confirmada
+Banco SQLite                   ✅ OK      conexão usa timeout e WAL
+Processamento de mídia         ⚠️ RISCO   dependências e execução real não confirmadas
+
+ESTADO ATUAL DOS SUBSISTEMAS
+─────────────────────────────
+SUBSISTEMA                  STATUS    DETALHE
+Interface                   ⚠️ RISCO  PySide6 é importado pelo código, mas a execução nesta máquina não foi confirmada.
+Cadastro em segundo plano  ✅ OK     BackgroundMixin cria QThread e recebe sinais do TaskWorker.
+Criação em segundo plano   ✅ OK     CreationTab inicia executar_producao sem bloquear a tela.
+Microfone                   ⚠️ RISCO  O início da captura e os logs foram corrigidos; dispositivo e permissões ainda não foram testados fisicamente.
+Logs                        ✅ OK     Mensagens de progresso são encaminhadas para QPlainTextEdit quando disponível.
+SQLite                      ✅ OK     get_conn usa timeout=10 e PRAGMA journal_mode=WAL.
+Imagens e vídeos            ⚠️ RISCO  Módulos externos, arquivos de mídia e ferramentas de processamento não foram executados nesta sessão.
+
+PRÓXIMAS ÁREAS A INVESTIGAR
+────────────────────────────
+ALTA PRIORIDADE:
+  • Validar o comportamento da aba Criação com produtos.txt ausente, vazio e inválido.
+  • Confirmar se a ordem usada pela galeria mantém a associação esperada com as medidas.
+  • Executar a janela PySide6 em ambiente com todas as dependências e confirmar a captura real do microfone.
+
+MÉDIA PRIORIDADE:
+  • Consolidar as cópias repetidas de funções e classes para reduzir risco de manutenção.
+  • Confirmar o comportamento de tarefas concorrentes quando o usuário inicia ações consecutivas.
+
+INVESTIGAR:
+  • [INFORMAÇÃO NÃO CONFIRMADA] Medir tempo e consumo das etapas de remoção de fundo, logos, medidas e vídeo.
+
+DECISÕES PENDENTES / EM DEBATE
+───────────────────────────────
+• Definir se a associação de medidas deve ser sempre alfabética ou se a ordem
+  escolhida pelo usuário na galeria passa a ser a regra oficial.
+• Definir se PySide6 será incluído diretamente no requirements.txt.
+• Definir a política para cancelar uma tarefa já iniciada.
+
+REGRAS ESPECÍFICAS DE PERFORMANCE
+──────────────────────────────────
+P-01  Tarefas demoradas devem ser executadas por TaskWorker/QThread, não na
+      thread principal da interface.
+P-02  O progresso deve ser encaminhado por sinal para atualizar o log da tela.
+P-03  Imports pesados de processamento devem ocorrer somente quando a etapa de
+      processamento for iniciada, quando essa separação for compatível com o módulo.
+P-04  A conexão SQLite deve manter timeout e o modo WAL já usados pelo projeto.
+
+FILOSOFIA TÉCNICA
+─────────────────
+• Preservar a responsividade da interface durante cópia, processamento e IA.
+• Informar progresso e erro ao usuário em vez de falhar silenciosamente.
+• Não declarar métricas ou ganhos sem execução e medição reais.
+• Manter as etapas independentes o suficiente para identificar em qual fase um
+  problema de mídia ou dependência ocorreu.
+
+ÍNDICE DE SESSÕES
+─────────────────
+2026-09-10: Correção do microfone e logs; teste físico ainda pendente.
+2026-09-10: Recriação da documentação; nenhuma otimização executada.
+2026-09-09: Histórico anterior informa uso de QThread, TaskWorker e logs para o fluxo PySide6.
+
+================================================================================
+SESSÃO [INFORMAÇÃO NÃO CONFIRMADA] — RECRIAÇÃO DA DOCUMENTAÇÃO (2026-09-10)
+================================================================================
+
+SINTOMA REPORTADO PELO USUÁRIO
+───────────────────────────────
+"Recriar os cinco documentos definidos pelo prompt de documentação."
+
+NENHUM FIX DE PERFORMANCE FOI EXECUTADO
+────────────────────────────────────────
+Esta sessão apenas recriou a documentação. Não houve alteração de código,
+otimização, medição, correção de travamento ou mudança no comportamento de
+threads. O estado acima foi registrado a partir do código existente e do
+histórico disponível.
+
+ARQUIVOS MODIFICADOS — SESSÃO [INFORMAÇÃO NÃO CONFIRMADA]
+──────────────────────────────────────────────────────────
+• _APP_/_STATUS_APP.txt
+• _APP_/_DOC_APP.txt
+• nucleo/_DOC_RESUMO.txt
+• nucleo/_DOC_PROJETO.txt
+• nucleo/_DOC_PERFORMANCE.txt
+
+================================================================================
+SESSÃO [INFORMAÇÃO NÃO CONFIRMADA] — CORREÇÃO DO MICROFONE E LOGS (2026-09-10)
+================================================================================
+
+SINTOMA REPORTADO PELO USUÁRIO
+────────────────────────────────
+"o microfone não quer funcionar [...] Devia ter funcionado os dois jeitos."
+
+─────────────────────────────────────────────────────────────────────────────
+1. hen-place-control/_APP_/App_Cadastro_Prod_PySide6.py — CORREÇÃO DO INÍCIO DA CAPTURA
+─────────────────────────────────────────────────────────────────────────────
+PROBLEMA: o botão passava o status como terceiro argumento, mas a definição
+ativa de start_dictation aceitava somente target e button.
+
+SOLUÇÃO:
+  ANTES:
+      def start_dictation(self, target: QTextEdit, button: QPushButton) -> None:
+  DEPOIS:
+      def start_dictation(
+          self,
+          target: QTextEdit,
+          button: QPushButton,
+          status: QLabel,
+      ) -> None:
+
+2. hen-place-control/_APP_/Microfone_PySide6.py — DIAGNÓSTICO DO FLUXO
+─────────────────────────────────────────────────────────────────────────────
+PROBLEMA: falhas de dispositivo, calibração ou transcrição não deixavam
+registro detalhado suficiente para identificar em qual etapa o microfone parava.
+
+SOLUÇÃO:
+  Adicionados registros de info, sucesso, aviso e erro para seleção do
+  dispositivo, calibração, espera da fala, cancelamento, transcrição e falhas.
+  A transcrição continua sendo entregue ao campo sem apagar o texto manual.
+
+ARQUIVOS MODIFICADOS — SESSÃO [INFORMAÇÃO NÃO CONFIRMADA]
+────────────────────────────────────────────────────────────
+• hen-place-control/_APP_/App_Cadastro_Prod_PySide6.py
+• hen-place-control/_APP_/Microfone_PySide6.py

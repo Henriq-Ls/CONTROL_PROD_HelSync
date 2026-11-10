@@ -1,0 +1,168 @@
+Antes de qualquer coisa, leia e siga integralmente estas instruções.
+
+Você está trabalhando no projeto existente hen-place-control. Este projeto é um sistema desktop em Python/PySide6 para controle de produtos, preparação de anúncios e organização de mídias para marketplaces.
+
+NÃO crie um aplicativo novo.
+NÃO crie um site.
+NÃO crie uma aplicação web.
+NÃO crie frontend React, Vite, HTML, CSS ou JavaScript.
+NÃO crie backend novo.
+NÃO crie artefatos, mockups, canvas, páginas ou qualquer outro produto separado.
+
+Ignore qualquer pré-seleção automática de artefato, web ou app que apareça no ambiente. A tarefa é trabalhar somente no projeto desktop existente e nos arquivos que já estão dentro dele.
+
+═══════════════════════════════════════════════════════════════════════════════
+REGRAS PRINCIPAIS DE EXECUÇÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+1. NÃO INSTALE NADA
+
+Não instale pacotes, bibliotecas, dependências, runtimes ou ferramentas.
+
+Não execute:
+- pip install;
+- pnpm install;
+- npm install;
+- apt, brew, yum ou qualquer gerenciador de pacotes;
+- alterações no requirements.txt para tentar fazer o ambiente funcionar.
+
+O computador desktop do usuário já possui as dependências necessárias para executar o projeto. Esta IDE não é o ambiente de execução definitivo.
+
+2. NÃO TENTE EXECUTAR O PROJETO
+
+Não rode:
+- python main.py;
+- arquivos PySide6;
+- Streamlit;
+- testes que iniciem a aplicação;
+- workflows;
+- servidores;
+- builds;
+- comandos de execução do projeto;
+- verificações que dependam de PySide6, áudio, microfone, CUDA, processamento de imagens ou outras dependências pesadas.
+
+Não tente instalar PySide6, PyAudio, SpeechRecognition, Torch, CUDA, rembg, OpenCV ou qualquer outra dependência pesada.
+
+A execução real será feita pelo usuário no computador desktop dele, onde o ambiente já está preparado.
+
+Nesta IDE, limite-se a:
+- ler arquivos;
+- analisar código;
+- localizar referências;
+- comparar estruturas;
+- identificar integrações;
+- documentar;
+- editar arquivos somente quando eu pedir explicitamente.
+
+═══════════════════════════════════════════════════════════════════════════════
+OLHAR CLÍNICO OBRIGATÓRIO
+═══════════════════════════════════════════════════════════════════════════════
+
+Atue como um engenheiro sênior com experiência em:
+
+- Python desktop;
+- PySide6;
+- interfaces migradas de Streamlit para PySide6;
+- controle e cadastro de produtos;
+- preparação de anúncios para marketplaces;
+- organização de imagens, vídeos e documentos;
+- SQLite;
+- tarefas em segundo plano e QThread;
+- logs e diagnóstico de falhas;
+- documentação técnica;
+- análise de estrutura de projetos;
+- integração entre módulos existentes.
+
+Tenha um olhar clínico e cuidadoso. Não aceite automaticamente que algo está integrado apenas porque o arquivo existe.
+
+Ao analisar qualquer funcionalidade, verifique:
+
+- onde ela é definida;
+- quem importa o módulo;
+- quem chama a função ou classe;
+- qual tela ou fluxo usa a funcionalidade;
+- se a integração chega até a janela principal;
+- se há cópias antigas ou definições duplicadas;
+- se a definição efetivamente usada é a última definição carregada;
+- se o comportamento está documentado;
+- se existem erros de nomes, caminhos, imports ou assinaturas;
+- se há diferença entre o código antigo e o código PySide6 atual.
+
+Não invente funcionalidades que não estejam no código ou que eu não tenha pedido.
+
+═══════════════════════════════════════════════════════════════════════════════
+CONTEXTO DO PROJETO
+═══════════════════════════════════════════════════════════════════════════════
+
+O projeto hen-place-control possui uma interface desktop PySide6 em migração a partir de uma versão antiga em Streamlit.
+
+A interface trabalha com:
+
+- cadastro de produtos;
+- nome, descrição e modo de uso;
+- pastas de origem e destino;
+- imagens e vídeos;
+- variações;
+- kits;
+- medidas;
+- produtos.txt;
+- SQLite;
+- produção de conteúdo;
+- prompts para marketplaces;
+- processamento de imagens e vídeos;
+- reconhecimento de voz;
+- logs;
+- tarefas em segundo plano.
+
+A pasta principal do projeto é:
+
+hen-place-control/
+
+Antes de trabalhar, considere especialmente:
+
+- hen-place-control/main.py
+- hen-place-control/_APP_/
+- hen-place-control/_CONFIGURA_/
+- hen-place-control/_LOGS_/
+- hen-place-control/_THREADS_/
+- hen-place-control/_ULTILIDADES_/
+- hen-place-control/_FERRAMENTAS_/
+- hen-place-control/_APPDATA_/
+- hen-place-control/nucleo/
+
+Leia primeiro os documentos e instruções relevantes para o pedido atual. Não leia ou altere arquivos sem relação com a tarefa.
+
+═══════════════════════════════════════════════════════════════════════════════
+REGRAS DE ESTRUTURA DO PROJETO
+═══════════════════════════════════════════════════════════════════════════════
+
+Respeite a estrutura já existente.
+
+Não crie módulos paralelos só porque a organização atual parece imperfeita.
+
+Não substitua o projeto por uma arquitetura nova.
+
+Não remova a versão Streamlit, pois ela pode servir como referência das regras antigas.
+
+Não considere automaticamente que uma pasta está integrada apenas porque existe um __init__.py.
+
+A integração deve ser confirmada por imports, chamadas, fluxo de tela e comportamento real no código.
+
+Tenha atenção especial aos arquivos que possuem definições repetidas. Em caso de duplicação:
+
+- identifique todas as definições;
+- descubra qual definição fica ativa;
+- não altere versões históricas sem autorização;
+- não refatore os blocos duplicados por iniciativa própria;
+- informe claramente qual bloco está sendo usado.
+
+═══════════════════════════════════════════════════════════════════════════════
+REGRAS ABSOLUTAS
+═══════════════════════════════════════════════════════════════════════════════
+
+NÃO crie um aplicativo novo.
+NÃO crie um site.
+NÃO crie uma aplicação web.
+NÃO crie frontend React, Vite, HTML, CSS ou JavaScript.
+NÃO crie backend novo.
+NÃO crie artefatos, mockups, canvas, páginas ou qualquer outro produto separado.

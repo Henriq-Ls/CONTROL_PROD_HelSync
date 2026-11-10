@@ -1,0 +1,4 @@
+_BANCOS_/Base_Dados.db
+_BANCOS_/backups/
+__pycache__/
+*.py[cod]

@@ -3,10 +3,12 @@
 import os
 import re
 import subprocess
+from typing import Callable
+
 FFMPEG_PATH = r"_FERRAMENTAS_\ffmpeg\bin\ffmpeg.exe"
 
 def _get_video_info(video_path, ffmpeg_path):
-    """Lê dimensões reais, rotação e duração do vídeo."""
+    """Lê dimensões, rotação, duração e presença de áudio do vídeo."""
     result = subprocess.run(
         [ffmpeg_path, "-i", video_path],
         capture_output=True, text=True
@@ -30,7 +32,10 @@ def _get_video_info(video_path, ffmpeg_path):
     else:
         duracao = 59
 
-    return width, height, rotation, duracao
+    tem_audio = bool(
+        re.search(r"Stream\s+#\d+:\d+.*\bAudio:", stderr, re.IGNORECASE)
+    )
+    return width, height, rotation, duracao, tem_audio
 
 def _filtro_rotacao(rotation, width, height):
     """
@@ -57,15 +62,33 @@ def _filtro_rotacao(rotation, width, height):
     return ""
 
 # ⚠️  função grande (136 linhas)
-def Converte_Video_Completo(ref, input_video, pasta_video, logo_path, qrcode_path, musica_path,som, link_url,max_size_mb, max_duration):
+def Converte_Video_Completo(
+    ref,
+    input_video,
+    pasta_video,
+    logo_path,
+    qrcode_path,
+    musica_path,
+    som,
+    link_url,
+    max_size_mb,
+    max_duration,
+    progress: Callable[[str], None] | None = None,
+):
     os.makedirs(pasta_video, exist_ok=True)
     output_video = os.path.join(pasta_video, f"video_{ref}.mp4")
+    if progress:
+        progress(f"Pasta de vídeo pronta: {pasta_video}")
+        progress("Preparando conversão do vídeo...")
 
     fade_in  = 1.5
     fade_out = 2.0
 
     # ── Lê info real do vídeo ────────────────────────────────────
-    width, height, rotation, dur_original = _get_video_info(input_video, FFMPEG_PATH)
+    width, height, rotation, dur_original, tem_audio = _get_video_info(
+        input_video,
+        FFMPEG_PATH,
+    )
     print(f"Vídeo original: {width}x{height} | rotação: {rotation}° | duração: {dur_original:.1f}s")
 
     # ← FIX PRINCIPAL: usa a duração REAL do vídeo, nunca maior que o limite
@@ -84,64 +107,133 @@ def Converte_Video_Completo(ref, input_video, pasta_video, logo_path, qrcode_pat
 
     alvo_w = min(1080, width)
 
-    filter_complex = (
-        # ── VÍDEO BASE ───────────────────────────────────────────
-        f"[0:v]{transpor}scale={alvo_w}:-2,"
-        f"eq=brightness=0.10:contrast=1.18:saturation=1.2,"
-        f"unsharp=5:5:1.50:3:3:0.20," # Recupera nitidez e textura
-        f"vibrance=0.20,"  # Deixa as cores mais vivas sem exagerar
-        f"colorbalance=rs=0.003:gs=0.002:bs=-0.003,"  # Corrige equilíbrio de cores
-        f"fade=t=in:st=0:d={fade_in},"
-        f"fade=t=out:st={duracao - fade_out}:d={fade_out}"
-        "[vbase];"
+    argumentos = [FFMPEG_PATH, "-y", "-i", input_video]
+    proximo_indice = 1
+    indice_musica = None
+    indice_logo = None
+    indice_qr = None
 
-        # ── LOGO (canto superior esquerdo) ───────────────────────
-        "[2:v]scale=100:100,"
-        f"fade=t=in:st=0:d={fade_in}:alpha=1,"
-        f"fade=t=out:st={duracao - fade_out}:d={fade_out}:alpha=1"
-        "[logo];"
+    if musica_path and float(som) > 0:
+        if not os.path.isfile(musica_path):
+            raise FileNotFoundError(f"Arquivo de música não encontrado: {musica_path}")
+        argumentos.extend(["-i", musica_path])
+        indice_musica = proximo_indice
+        proximo_indice += 1
 
-        # ── QR CODE (canto inferior direito) ─────────────────────
-        "[3:v]scale=110:110,"
-        f"fade=t=in:st=0:d={fade_in}:alpha=1,"
-        f"fade=t=out:st={duracao - fade_out}:d={fade_out}:alpha=1"
-        "[qrcode];"
+    if logo_path:
+        if not os.path.isfile(logo_path):
+            raise FileNotFoundError(f"Logo de vídeo não encontrada: {logo_path}")
+        argumentos.extend(["-loop", "1", "-i", logo_path])
+        indice_logo = proximo_indice
+        proximo_indice += 1
 
-        # ── OVERLAYS ─────────────────────────────────────────────
-        "[vbase][logo]overlay=20:20[v1];"
-        "[v1][qrcode]overlay=W-w-20:H-h-20[v2];"
+    if qrcode_path:
+        if not os.path.isfile(qrcode_path):
+            raise FileNotFoundError(f"QR Code não encontrado: {qrcode_path}")
+        argumentos.extend(["-loop", "1", "-i", qrcode_path])
+        indice_qr = proximo_indice
 
-        # ── TEXTO CENTRALIZADO EMBAIXO ────────────────────────────
-        f"[v2]drawtext=text='{link_url}':"
-        "fontcolor=white:fontsize=24:"
-        "x=(w-text_w)/2:y=h-60:"           # w e h minúsculos = dimensão do frame atual
-        "box=1:boxcolor=black@0.55:boxborderw=10"
-        "[vfinal];"
+    filtros = [
+        (
+            f"[0:v]{transpor}scale={alvo_w}:-2,"
+            "eq=brightness=0.10:contrast=1.18:saturation=1.2,"
+            "unsharp=5:5:1.50:3:3:0.20,"
+            "vibrance=0.20,"
+            "colorbalance=rs=0.003:gs=0.002:bs=-0.003,"
+            f"fade=t=in:st=0:d={fade_in},"
+            f"fade=t=out:st={duracao - fade_out}:d={fade_out}"
+            "[vbase]"
+        )
+    ]
+    rotulo_video = "vbase"
 
-        # ── ÁUDIO: mix + fade out ────────────────────────────────
-        f"[0:a]volume=0.7,afade=t=out:st={duracao - fade_out}:d={fade_out}[a1];"
-        f"[1:a]volume={som},afade=t=out:st={duracao - fade_out}:d={fade_out}[a2];"
-        "[a1][a2]amix=inputs=2:normalize=0[a]"
-    )
+    if indice_logo is not None:
+        filtros.append(
+            f"[{indice_logo}:v]scale=100:100,"
+            f"fade=t=in:st=0:d={fade_in}:alpha=1,"
+            f"fade=t=out:st={duracao - fade_out}:d={fade_out}:alpha=1[logo]"
+        )
+        filtros.append(f"[{rotulo_video}][logo]overlay=20:20[vlogo]")
+        rotulo_video = "vlogo"
 
-    cmd = [
-        FFMPEG_PATH, "-y",
-        "-i", input_video,
-        "-i", musica_path,
-        "-loop", "1", "-i", logo_path,
-        "-loop", "1", "-i", qrcode_path,
+    if indice_qr is not None:
+        filtros.append(
+            f"[{indice_qr}:v]scale=110:110,"
+            f"fade=t=in:st=0:d={fade_in}:alpha=1,"
+            f"fade=t=out:st={duracao - fade_out}:d={fade_out}:alpha=1[qrcode]"
+        )
+        filtros.append(
+            f"[{rotulo_video}][qrcode]overlay=W-w-20:H-h-20[vqr]"
+        )
+        rotulo_video = "vqr"
+
+    if link_url:
+        texto_link = (
+            str(link_url)
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace(":", "\\:")
+            .replace(",", "\\,")
+            .replace("%", "\\%")
+        )
+        filtros.append(
+            f"[{rotulo_video}]drawtext=text='{texto_link}':"
+            "fontcolor=white:fontsize=24:"
+            "x=(w-text_w)/2:y=h-60:"
+            "box=1:boxcolor=black@0.55:boxborderw=10[vfinal]"
+        )
+    else:
+        filtros.append(f"[{rotulo_video}]null[vfinal]")
+
+    rotulo_audio = None
+    if tem_audio:
+        filtros.append(
+            f"[0:a]volume=0.7,"
+            f"afade=t=out:st={duracao - fade_out}:d={fade_out}[a_original]"
+        )
+        rotulo_audio = "a_original"
+
+    if indice_musica is not None:
+        filtros.append(
+            f"[{indice_musica}:a]volume={som},"
+            f"afade=t=out:st={duracao - fade_out}:d={fade_out}[a_musica]"
+        )
+        if rotulo_audio:
+            filtros.append(
+                "[a_original][a_musica]amix=inputs=2:normalize=0[a_final]"
+            )
+            rotulo_audio = "a_final"
+        else:
+            rotulo_audio = "a_musica"
+
+    filter_complex = ";".join(filtros)
+    cmd = argumentos + [
         "-filter_complex", filter_complex,
         "-map", "[vfinal]",
-        "-map", "[a]",
-        "-t", str(duracao),           # ← agora usa a duração real
-        "-c:v", "libx264",
-        "-crf", "26",
-        "-preset", "fast",
-        "-movflags", "+faststart",
-        "-c:a", "aac",
-        "-b:a", "128k",
-        output_video                   # ← removido -shortest (conflitava com -loop 1)
     ]
+    if rotulo_audio:
+        cmd.extend(
+            [
+                "-map",
+                f"[{rotulo_audio}]",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+            ]
+        )
+    else:
+        cmd.append("-an")
+    cmd.extend(
+        [
+            "-t", str(duracao),
+            "-c:v", "libx264",
+            "-crf", "26",
+            "-preset", "fast",
+            "-movflags", "+faststart",
+            output_video,
+        ]
+    )
 
     print(f"Criando vídeo de {duracao:.1f}s...")
     print("COMANDO FFMPEG:")
@@ -153,6 +245,8 @@ def Converte_Video_Completo(ref, input_video, pasta_video, logo_path, qrcode_pat
 
     if result.returncode != 0:
         print(f"Erro FFmpeg:\n{result.stderr}")
+        if progress:
+            progress(f"Erro na conversão do vídeo: {result.stderr.strip()}")
 
         return False
 
@@ -191,15 +285,7 @@ def Converte_Video_Completo(ref, input_video, pasta_video, logo_path, qrcode_pat
         print(f"Recomprimido: {tamanho_final:.1f}MB")
 
     print(f"Pronto para Shopee: {os.path.getsize(output_video) / (1024 * 1024):.1f}MB | {duracao:.1f}s | MP4")
+    if progress:
+        progress(f"Vídeo concluído: {output_video}")
 
     return True
-
-R"""
-Converte_Video_Completo('suv',
-r'C:\Users\henri\Downloads\Imagens\video.mp4',
-r'C:\Users\henri\Downloads\Imagens\video convert.mp4',
-r'C:\Users\henri\PycharmProjects\SO_RUSTICO_SHOPEE\Imagens\video.png',
-r'C:\Users\henri\PycharmProjects\SO_RUSTICO_SHOPEE\Imagens\qr_code_zap.jpg',
-r'C:\Users\henri\PycharmProjects\SO_RUSTICO_SHOPEE\Imagens\Simple.mp3',0.15,
-'henriqls.shop',90,60)
-"""

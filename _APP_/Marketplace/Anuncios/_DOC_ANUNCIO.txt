@@ -1,0 +1,79 @@
+ABA ANÚNCIO — FLUXO ATUAL
+=========================
+
+POSIÇÃO E CONTEXTO
+------------------
+- A aba contém duas subabas: “Montar anúncio” mantém o fluxo atual, ligado ao
+  registro ativo de Criação/Resultados; “Anunciar” funciona como uma vitrine
+  independente para revisar produtos já gerados.
+- “Anunciar” lista os produtos com ID comercial, do mais recente para o mais
+  antigo, e permite selecionar qualquer um deles.
+- Mostra os fatos textuais do Cadastro e as imagens de G para conferência
+  humana. As imagens não são enviadas ao painel de IA.
+- O ID comercial não é digitado nesta tela. A configuração comercial consulta
+  os IDs já gerados para o produto selecionado.
+
+FLUXO DE TEXTO E IA
+-------------------
+- “Gerar sugestão no chat” envia o pedido ao painel de IA. A resposta continua
+  em texto simples e não preenche os campos automaticamente.
+- O usuário revisa e copia manualmente o título e a descrição da conversa para
+  os campos correspondentes.
+- “Copiar prompt de pesquisa web” prepara o prompt antigo com os fatos,
+  medidas/peso e formas de venda. O usuário cola esse prompt em uma IA externa
+  com busca na web; o aplicativo não consulta a internet nem confirma preços.
+- Não interpretar JSON nesta etapa. O preenchimento automático por JSON fica
+  para uma etapa futura.
+
+DADOS DE ANÚNCIO E PERSISTÊNCIA
+-------------------------------
+- Título e descrição são editados manualmente depois da resposta da IA. Não são
+  enviados nem preenchidos automaticamente pelo painel.
+- Plataformas, preço, custo e quantidade por ID são configurados nesta aba,
+  usando os IDs de Criação e a grade já existente.
+- Ao salvar a configuração comercial, o título e a descrição revisados também
+  são gravados em MARKET_PLACE. A gravação preserva unidades que já tenham
+  dados de venda e não reduz o estoque existente.
+- O rascunho de título e descrição continua sendo mantido por produto durante a
+  sessão até que os dados comerciais sejam salvos.
+- “Anunciar” mostra título, descrição, dados do produto, imagens da pasta G,
+  vídeo pronto da pasta F (com prévia), e os dados comerciais por ID.
+- A vitrine permite editar e salvar título/descrição em MARKET_PLACE, além de
+  copiar cada texto ou a ficha completa. A gravação altera somente esses dois
+  campos; não muda estoque, venda, cliente, preço, custo ou marketplaces.
+- Preço, custo, estoque e marketplaces continuam sendo editados em
+  “Montar anúncio”. A categoria aparece como não cadastrada porque não existe
+  uma coluna correspondente no banco atual.
+
+ETIQUETAS
+---------
+- A prévia e a impressão usam o mecanismo existente em
+  _FERRAMENTAS_/Impressora.py.
+- A grade por ID e o salvamento vêm antes do painel de etiquetas. Como o preço
+  de venda é impresso, a prévia e a impressão ficam bloqueadas até que todos os
+  IDs tenham preço positivo.
+- Cada unidade definida na quantidade do ID gera uma etiqueta com ID, data,
+  nome do produto e preço. É possível ajustar papel, colunas, fonte,
+  alinhamento, rotação, borda e quebra de linha.
+- A prévia converte a imagem para PNG em memória e verifica o conteúdo gravado
+  no buffer antes de carregá-la na interface.
+- A impressão direta usa a impressora padrão do Windows e ocorre fora da
+  thread da interface. A prévia não envia nada à impressora.
+- A ordem da tela é grade/configuração e salvamento, depois etiquetas.
+- A implementação da prévia e da impressão está no código; a validação visual
+  e o teste físico da impressora ainda dependem do computador Windows de destino.
+- Esta aba não registra a venda concluída nem os dados do comprador; isso é feito
+  na aba Vendas.
+
+LIMITES
+-------
+- Sem publicação em marketplace, integração externa, busca de concorrentes ou
+  envio de imagens à IA.
+- Sem entrada manual de ID e sem importação automática da resposta da IA.
+- O prompt de pesquisa web é copiado para uso em outra ferramenta; o app não
+  faz busca externa nem confirma preços de concorrentes.
+- O fluxo de venda realizada em PySide6 usa a lógica e as colunas legadas de
+  MARKET_PLACE, sem reaproveitar a interface Streamlit.
+- Categoria, palavras-chave e outros textos sugeridos sem colunas no banco
+  atual não são armazenados nem inventados pela vitrine.
+- A versão Streamlit continua histórica; a interface ativa é a desktop PySide6.

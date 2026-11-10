@@ -1,10 +1,17 @@
 # 📁 _FERRAMENTAS_/Impressora.py
 from PIL import Image, ImageDraw, ImageFont
-import math, io, math, os
-import win32print
-import win32ui
-import win32con
-WIN32_DISPONIVEL = True
+import io, math, os
+try:
+    import win32print
+    import win32ui
+    import win32con
+except (ImportError, OSError):
+    win32print = None
+    win32ui = None
+    win32con = None
+    WIN32_DISPONIVEL = False
+else:
+    WIN32_DISPONIVEL = True
 
 
 # INSTALA : pip install pywin32 - IMPRESSORA
@@ -36,7 +43,10 @@ def imprimir_etiquetas_grade_BANCO(
     rotacao=0
 ):
     if not WIN32_DISPONIVEL:
-        return
+        raise RuntimeError(
+            "A impressão direta de etiquetas exige uma instalação Windows "
+            "com pywin32 disponível."
+        )
 
     from PIL import ImageWin
 

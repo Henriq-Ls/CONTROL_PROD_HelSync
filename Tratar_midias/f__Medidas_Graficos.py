@@ -3,6 +3,10 @@
 from io import BytesIO
 import math
 import os
+import re
+import sys
+from decimal import Decimal, InvalidOperation
+from typing import Callable
 
 from PIL import (
     Image,
@@ -10,7 +14,7 @@ from PIL import (
     ImageFont
 )
 
-from rembg import remove
+from rembg import new_session, remove
 # ──────────────────────────────────────────────────────────────────────
 
 # ==========================================================
@@ -24,6 +28,8 @@ COR_PESO             = (0, 0, 0)
 COR_PONTILHADO       = (210, 20, 20)
 PONTILHADO           = 16
 ESPESSURA_PONTILHADO = 8
+MODELO_REMBG_MEDIDAS = "isnet-general-use"
+_SESSAO_CPU_MEDIDAS = None
 
 # ==========================================================
 # RÓTULOS POR TIPO DE MEDIDA
@@ -98,18 +104,120 @@ def _extrair_medidas(nome_arquivo: str):
 
         return "0", "0", None, "0gm"
 
+
+def _formatar_peso_exibicao(peso) -> str:
+    """Acrescenta a unidade ao peso do nome sem alterar valores com unidade."""
+    original = str(peso or "").strip()
+    if not original:
+        return ""
+
+    compacto = re.sub(r"\s+", "", original).lower()
+    correspondencia = re.fullmatch(
+        r"([+-]?(?:\d+(?:[.,]\d*)?|[.,]\d+))(kg|gm|g)?",
+        compacto,
+    )
+    if not correspondencia:
+        return original
+
+    numero, unidade = correspondencia.groups()
+    try:
+        valor = Decimal(numero.replace(",", "."))
+    except InvalidOperation:
+        return original
+
+    if not valor.is_finite() or valor < 0:
+        return original
+    if valor == 0:
+        return "0gm"
+    if unidade == "kg":
+        return f"{numero}kg"
+    if valor >= 1000:
+        quilogramas = format(valor / Decimal(1000), "f")
+        if "." not in quilogramas:
+            quilogramas += ".0"
+        return f"{quilogramas}kg"
+    return f"{numero}gm"
+
+
 # ==========================================================
 # REMOVE FUNDO / BBOX
 # ==========================================================
 
+def _sessao_cpu_medidas():
+    global _SESSAO_CPU_MEDIDAS
+    if _SESSAO_CPU_MEDIDAS is None:
+        _SESSAO_CPU_MEDIDAS = new_session(
+            MODELO_REMBG_MEDIDAS,
+            providers=["CPUExecutionProvider"],
+        )
+    return _SESSAO_CPU_MEDIDAS
+
+
+def _erro_memoria_gpu(exc: Exception) -> bool:
+    mensagem = str(exc).casefold()
+    return any(
+        trecho in mensagem
+        for trecho in ("out of memory", "cudamalloc", "cuda failure 2")
+    )
+
+
+def _mascara_para_bbox(dados: bytes):
+    modulo_remocao = sys.modules.get("Tratar_midias.c__Remove_Refina_IMG")
+    sessao_compartilhada = getattr(modulo_remocao, "sessao", None)
+    modo_gpu = bool(getattr(modulo_remocao, "MODO_GPU", False))
+
+    if sessao_compartilhada is not None:
+        try:
+            return remove(
+                dados,
+                session=sessao_compartilhada,
+                alpha_matting=True,
+                only_mask=True,
+            )
+        except Exception as exc:
+            if not modo_gpu or not _erro_memoria_gpu(exc):
+                raise
+            print(
+                "Memória insuficiente na GPU para calcular as medidas; "
+                "repetindo a detecção na CPU."
+            )
+            try:
+                return remove(
+                    dados,
+                    session=_sessao_cpu_medidas(),
+                    alpha_matting=True,
+                    only_mask=True,
+                )
+            except Exception as cpu_exc:
+                raise RuntimeError(
+                    "A detecção de limites falhou na GPU e também na CPU. "
+                    f"GPU: {exc}; CPU: {cpu_exc}"
+                ) from cpu_exc
+
+    return remove(
+        dados,
+        session=_sessao_cpu_medidas(),
+        alpha_matting=True,
+        only_mask=True,
+    )
+
+
 def detectar_bbox(imagem_path):
+    with Image.open(imagem_path) as original:
+        img = original.convert("RGBA")
+
+    alpha = img.getchannel("A")
+    if alpha.getextrema()[0] < 255:
+        bbox = alpha.getbbox()
+        if not bbox:
+            bbox = (0, 0, img.width, img.height)
+        return img, bbox
+
     with open(imagem_path, "rb") as f:
         dados = f.read()
-
-    mask_bytes = remove(dados, alpha_matting=True, only_mask=True)
-    mask       = Image.open(BytesIO(mask_bytes)).convert("L")
-    bbox       = mask.getbbox()
-    img        = Image.open(imagem_path).convert("RGBA")
+    mask_bytes = _mascara_para_bbox(dados)
+    mask = Image.open(BytesIO(mask_bytes)).convert("L")
+    bbox = mask.getbbox()
 
     if not bbox:
 
@@ -348,8 +456,11 @@ def gerar_medidas(imagem_path, n1, n2, n3, peso, kit, tipo_medidas):
     # PESO — canto superior direito
     # ======================================================
 
-    if peso and str(peso).strip() not in ("", "0gm", "0"):
-        txt_peso = imagem_texto_duplo("Peso", str(peso), fonte_label, fonte_peq)
+    peso_exibicao = _formatar_peso_exibicao(peso)
+    if peso_exibicao and peso_exibicao != "0gm":
+        txt_peso = imagem_texto_duplo(
+            "Peso", peso_exibicao, fonte_label, fonte_peq
+        )
         px_peso  = W - txt_peso.width - 12
         py_peso  = 12
         img.paste(txt_peso, (px_peso, py_peso), txt_peso)
@@ -365,7 +476,13 @@ def gerar_medidas(imagem_path, n1, n2, n3, peso, kit, tipo_medidas):
 # ==========================================================
 
 # ⚠️  except genérico vazio
-def Colocar_medidas(pasta_entrada, pasta_saida, tipo_kit_config, tipo_medidas):
+def Colocar_medidas(
+    pasta_entrada,
+    pasta_saida,
+    tipo_kit_config,
+    tipo_medidas,
+    progress: Callable[[str], None] | None = None,
+):
     """
     Lê todas as imagens de pasta_entrada, aplica as medidas
     com base no nome do arquivo e salva em pasta_saida.
@@ -386,8 +503,11 @@ def Colocar_medidas(pasta_entrada, pasta_saida, tipo_kit_config, tipo_medidas):
     print(f"\n{'='*52}")
     print(f"  Colocar_medidas — {len(arquivos)} imagens | kit={kit} | {tipo_medidas}")
     print(f"{'='*52}\n")
+    if progress:
+        progress(f"Pasta de medidas pronta: {pasta_saida}")
+        progress(f"Desenhando medidas em {len(arquivos)} imagem(ns)...")
 
-    for arq in arquivos:
+    for indice, arq in enumerate(arquivos, start=1):
         caminho_entrada = os.path.join(pasta_entrada, arq)
         nome_saida      = os.path.splitext(arq)[0] + ".jpg"
         caminho_saida   = os.path.join(pasta_saida, nome_saida)
@@ -404,10 +524,16 @@ def Colocar_medidas(pasta_entrada, pasta_saida, tipo_kit_config, tipo_medidas):
             fundo.paste(img_result, mask=img_result.split()[3])
             fundo.save(caminho_saida, "JPEG", quality=95, optimize=True)
             print(f"  ✓ {arq} → {nome_saida}")
+            if progress:
+                progress(f"Medidas {indice}/{len(arquivos)}: {nome_saida}")
 
         except Exception as e:
             print(f"  ✗ Erro em {arq}: {e}")
+            if progress:
+                progress(f"Erro nas medidas de {arq}: {e}")
 
     print(f"\n  ✓ Colocar_medidas finalizado → {pasta_saida}\n")
+    if progress:
+        progress(f"Pasta de medidas concluída: {pasta_saida}")
 
     return pasta_saida

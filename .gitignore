@@ -1,62 +1,16 @@
-# ====================== ARQUIVOS DE SENHAS ======================
-_GERENTE_PROJETO_/.senhas
-_GERENTE_PROJETO_/.env
-_GERENTE_PROJETO_/as_3vers_Remove_FUndo
-
-*.env
-!*.env.example
-
-# ====================== ARQUIVOS TEMPORÁRIOS / RASCUNHOS ======================
-text.txt
-Rascunho.py
-Rasc.py
-Rasc2.py
-relatorio_codigo.txt
-Arvore_Projeto.py
-
-# ====================== BANCO DE DADOS ======================
-*.sqlite
-*.db
-*.sqbpro
-identifier.sqlite
-Base_Dados.sqbpro
-
-# ====================== OUTROS ======================
-ffmpeg
-
-# ====================== PASTAS E ARQUIVOS GERAIS ======================
+_BANCOS_/Base_Dados.db
+_BANCOS_/backups/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Ambientes virtuais
+*.py[cod]
+.hein/
 .venv/
-venv/
-ENV/
+.agents/
+_FERRAMENTAS_/ffmpeg
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
+*.db-journal
+*.db-wal
+*.db-shm
 
-# Logs
-*.log
-logs/
+*.db-journal
+*.db-wal
+*.db-shm

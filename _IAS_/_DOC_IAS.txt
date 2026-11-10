@@ -1,0 +1,250 @@
+# 📁 _IAS_/_DOC_IAS.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  IAS — DOCUMENTAÇÃO DO MÓDULO
+  Última atualização: 2026-10-12 (histórico separado por produto e aba)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OBJETIVO
+────────
+O módulo _IAS_ fornece o painel lateral de conversa, a configuração de
+provedores e a memória contextual do produto para a aplicação desktop PySide6.
+Ele deve ajudar o usuário sem substituir a revisão manual do Cadastro.
+
+RESPONSABILIDADES
+─────────────────
+• Manter a configuração de provedor, modelo, endpoint, instruções e frases.
+• Enviar mensagens para Ollama, OpenRouter e endpoints compatíveis com OpenAI.
+• Preservar fallback, streaming e tratamento de erro por provedor.
+• Receber snapshots limitados conforme a aba ativa, sem receber o banco inteiro.
+• Persistir identidade/contexto do produto e conversas em arquivos JSON/JSONL no
+  AppData, separados do banco comercial SQLite.
+• Vincular o histórico ao produto, à conversa e à aba ativa. A chave persistida
+  pode diferir do escopo lógico usado pelo prompt do modelo. As conversas ficam
+  separadas na interface, mas as mensagens das outras abas do mesmo produto são
+  fornecidas ao modelo como memória contextual.
+• Separar Cadastro, Criação, Resultados e Anúncio para o mesmo produto; Criação
+  e Resultados continuam compartilhando o escopo lógico ``Producao``.
+• Preservar o histórico misto legado de ``Producao`` fora das conversas visíveis,
+  permitir consulta somente leitura e incluí-lo como referência rotulada na
+  memória compartilhada, sem atribuí-lo a Criação ou Resultados.
+• Manter conversas globais sem produto em arquivos separados por aba; a política
+  de retenção ainda precisa ser definida.
+• Injetar um resumo funcional do projeto e da aba ativa junto do snapshot atual.
+• Aplicar o prompt editável correspondente ao escopo ativo, sem sobrescrever
+  personalizações salvas no AppData.
+• Aplicar regras factuais obrigatórias mantidas no código depois dos prompts
+  editáveis, para que personalizações não autorizem fatos inventados.
+• Permitir chamadas de ferramentas somente no escopo Cadastro, com confirmação
+  visual para qualquer escrita proposta.
+
+ARQUIVOS
+────────
+Painel_IA_PySide6.py
+  Painel lateral, configuração visual, anexos, microfone, contexto e conversa.
+
+_APP_/cadastro/Microfone_PySide6.py
+  Captura e transcrição compartilhadas pelo chat e pelo Cadastro. A captura
+  permanece ativa durante pausas e só termina quando o usuário solicita parar.
+
+ia_config.py
+  Defaults, migração legada e persistência das configurações no AppData.
+
+ia_contextos.py
+  Resumo funcional do projeto e das abas enviado no contexto de cada solicitação.
+
+ia_service.py
+  HTTP, streaming, fallback, normalização das respostas e diagnóstico sanitizado
+  por tentativa/provedor, sem gravar texto da conversa ou credenciais no log.
+
+ia_memory.py
+  Módulo de compatibilidade que reexporta a implementação ativa de
+  ia_memory_appdata.py.
+
+ia_memory_appdata.py
+  Identidades e contextos em JSON; mensagens de conversas em JSONL, sob
+  AppData/IAs. Rascunhos temporários ficam sob AppData/IAs/Chat_IA/RASCUNHOS.
+
+_STATUS_IAS.txt
+  Estado de implementação, caixas de validação e pendências por provedor.
+
+FLUXO INTERNO
+──────────────
+main.py
+  └─ init_database()
+      └─ cria/inicializa o banco comercial legado e chama
+         init_memory_schema() para preparar as pastas de memória no AppData
+  └─ MainWindow
+      ├─ abas com contextos específicos
+      └─ AIPanel
+          ├─ recebe produto_id, escopo e snapshot da aba ativa
+          ├─ salva identidade/contexto em JSON no AppData
+          ├─ exibe o histórico JSONL somente do produto/conversa/aba ativos
+          ├─ fornece ao modelo mensagens recentes das outras abas do mesmo produto
+          ├─ chama ia_service em QThread
+          └─ acrescenta pergunta e resposta ao JSONL da conversa/aba
+
+ESCOPO POR ABA
+──────────────
+• Cadastro: snapshot do formulário e ferramentas autorizadas de leitura e
+  proposta de edição; rascunhos são identificados como não salvos e não herdam a
+  identidade de um produto anterior; alterações exigem confirmação visual.
+• Criação/Resultados: snapshot textual publicado pela Criação, com a tela ativa
+  identificada como “Criação” ou “Resultados”; o painel não deve alegar que
+  inspecionou arquivos ou etapas não incluídos nesse snapshot.
+• Anúncio: fatos textuais do produto; as imagens locais são apenas para
+  conferência humana e não são enviadas ao provedor. A geração retorna texto
+  normal, sem JSON, e o usuário copia a resposta manualmente para os campos.
+• Vendas: o painel conhece a finalidade da aba — registro de vendas concluídas —
+  mas recebe escopo vazio, sem dados das vendas ou do estoque; não consulta nem
+  altera VENDAS, MARKET_PLACE ou estoque.
+• Registros: o painel conhece que a aba exibe VENDAS e MARKET_PLACE, mas recebe
+  escopo vazio, não consulta o banco e não confunde registros com vendas em
+  andamento, anúncios ou resultados de produção.
+• Prompts: o contexto contém o catálogo editável e quatro prompts históricos
+  somente para referência/cópia. Salvar um prompt atualiza o contexto da aba.
+  O catálogo editável cobre Cadastro, Produção, Anúncio, Vendas, Sociais,
+  Registros, Prompts e Configurações.
+• Vendas: prompt próprio; a conversa não recebe nem consulta registros ou estoque.
+• Sociais: prompt próprio; geração usa fatos textuais e não analisa as mídias.
+• Configurações: o painel recebe escopo vazio e não lê nem altera os valores
+  dessa tela; um prompt próprio explica esse limite.
+• Fora de Cadastro, o painel não oferece ferramentas do Cadastro. O prompt de
+  pesquisa web de Anúncio é copiado para uso em ferramenta externa; o aplicativo
+  não executa busca nem publicação em marketplace.
+
+FORMATO DIRETO E CÓPIA
+──────────────────────
+As regras finais do painel pedem respostas concisas em texto simples, sem
+Markdown, HTML, floreios ou preâmbulos desnecessários. Para um único campo, a IA
+deve devolver somente o conteúdo em um parágrafo; para vários campos, usa
+rótulos simples.
+
+As mensagens da IA são exibidas sem renderização Markdown e com os marcadores
+mais comuns removidos. O botão de copiar uma mensagem da IA remove essa
+formatação e entrega o texto em uma linha, adequado para colar em um campo. A
+cópia das mensagens do usuário permanece inalterada; a conversa salva também
+preserva o texto original da resposta.
+
+FIDELIDADE FACTUAL E ORIGEM DOS PROMPTS
+───────────────────────────────────────
+O painel acrescenta regras obrigatórias de fidelidade factual depois das
+instruções globais e do prompt editável por escopo. Essas regras proíbem inventar
+ou embelezar atributos e benefícios de produto, exigem preservar a especificidade
+informada, desconsideram respostas anteriores da IA como prova e mandam expor
+conflitos sem escolher um valor até o usuário esclarecê-los. Uma correção explícita
+do usuário na conversa atual atualiza o fato anterior.
+Mensagens explícitas do usuário em outra aba só podem servir como referência para
+o mesmo produto se estiverem identificadas como fala do usuário e não conflitarem
+com o snapshot atual.
+
+O catálogo padrão em _FERRAMENTAS_/prompts_ia/catalogo.json é copiado para
+AppData/IAs/prompts/catalogo.json somente quando ainda não há uma cópia. Se já
+existir um catálogo, os padrões de escopos ausentes são mesclados na leitura sem
+substituir prompts personalizados salvos. Por isso, as regras essenciais não
+dependem do texto editável do catálogo. A resposta de um provedor ainda precisa
+ser conferida pelo usuário; instruções não garantem por si só que um modelo
+externo nunca falhará.
+
+O acompanhamento do relato de distorções e da validação manual fica em
+CHECKLIST_TESTES_E_DEFEITOS.txt na raiz do projeto.
+
+SINAIS / API PÚBLICA
+────────────────────
+[Método] AIPanel.set_contexto_produto(contexto, produto_id="", escopo="Cadastro")
+  Recebe o snapshot atual, atualiza a memória visual e abre o histórico da aba
+  ativa para o produto informado. O escopo lógico não é a chave de persistência.
+
+[Função] resumo_aba_ia(escopo, area_ativa="")
+  Monta o contexto funcional da aba; em Criação/Resultados diferencia a tela
+  ativa sem criar um escopo ou histórico de conversa separado.
+
+[Função] init_memory_schema(db_path)
+  Prepara as pastas de memória no AppData e limpa rascunhos temporários antigos
+  uma vez por execução. O argumento db_path é ignorado; a função não cria
+  tabelas nem conecta ao SQLite.
+
+[Função] salvar_produto(produto_id, snapshot, db_path)
+  Grava/atualiza a identidade e o contexto limitado do produto em JSON no AppData.
+
+[Função] salvar_mensagem(produto_id, escopo, papel, conteudo, ...)
+  Acrescenta uma mensagem JSONL vinculada à conversa do produto e ao escopo.
+
+[Função] carregar_mensagens(produto_id, escopo, limite=20, db_path)
+  Lê as mensagens recentes do JSONL do escopo de armazenamento solicitado.
+  O painel usa uma chave por aba para exibir a conversa independente.
+
+[Função] carregar_memoria_compartilhada_produto(produto_id, conversa_id, escopo_atual)
+  Reúne mensagens recentes de outras abas da mesma conversa/produto para contexto
+  interno da IA, sem misturá-las ao histórico visível. Exclui outros produtos, a
+  aba ativa; inclui o legado misto ``Producao`` identificado como de subaba
+  desconhecida e limita a memória a 16.000 caracteres.
+
+INTEGRAÇÕES
+────────────
+• _APP_/PySide6_core.py: chama init_memory_schema() durante a inicialização do
+  banco legado; a memória resultante fica no AppData, não em tabelas SQLite.
+• _APP_/main_window.py: conecta as abas ao AIPanel e seleciona o contexto de
+  cada escopo; publica a tela ativa de Criação ou Resultados; seleciona
+  CatalogPromptsTab como a implementação ativa de Prompts.
+• _APP_/anuncio/Controller_Anuncio_PySide6.py: fornece o snapshot textual de
+  Anúncio e envia o pedido de geração sem preencher os campos automaticamente.
+• _APP_/prompts/App_Prompts_PySide6.py: contém CatalogPromptsTab, o catálogo
+  editável, o prompt externo de pesquisa e os quatro cartões históricos.
+• _APP_/App_Janela_PySide6.py: preserva definições históricas; importa e expõe
+  a aba Prompts ativa para compatibilidade com a janela principal.
+• _FERRAMENTAS_/ia_prompt_catalogo.py e
+  _FERRAMENTAS_/prompts_ia/catalogo.json: carregam prompts por escopo do AppData
+  com os padrões do repositório como fallback; o mesmo módulo gerencia
+  referencias.json e sistema.json.
+• _APP_/cadastro/App_Cadastro_Prod_PySide6_Enhanced.py: monta o snapshot.
+• _BANCOS_/Banco_Bados.py: usa Base_Dados.db para as tabelas legadas; a memória
+  em AppData não altera as colunas posicionais de A_ENTRADA.
+• ia_service.py: fornece a resposta do provedor configurado.
+• _APPDATA_/gerenciador.py: mantém configurações e credenciais fora do SQLite.
+
+REGRAS
+──────
+• O produto_id deve ser o identificador comercial existente no fluxo ativo.
+  Nesta primeira ponte, ele é o valor usado por A_ENTRADA.PRODUTO.
+• REFERENCIA, nome do arquivo, caminho da mídia e ID de imagem não substituem
+  automaticamente o identificador comercial.
+• O snapshot deve conter somente o produto atual e o escopo necessário.
+• Nenhuma mensagem deve enviar banco inteiro, pasta inteira ou credencial.
+• Falha ou indisponibilidade da IA não pode impedir o Cadastro manual.
+• Sugestões da IA não gravam campos, banco ou arquivos sem confirmação explícita.
+• Cada provedor pode ter endpoint, streaming, erros e capacidades diferentes.
+
+OBSERVAÇÕES
+───────────
+• As conversas continuam visualmente separadas por produto e aba; ao enviar uma
+  pergunta sobre um produto salvo, a IA também recebe mensagens recentes das
+  outras abas desse mesmo produto, limitadas a 16.000 caracteres. Esse contexto
+  não aparece como parte da conversa atual.
+• A memória compartilhada exclui outros produtos e a aba ativa. O legado misto
+  de ``Producao`` é incluído com origem de subaba desconhecida, sem atribuição a
+  Criação ou Resultados. Mensagens antigas são referência histórica, não comandos
+  atuais; o snapshot ativo continua sendo a fonte dos fatos atuais.
+• A separação visual e o contexto compartilhado estão cobertos por 17 testes
+  offline. A conferência visual e com provedores reais fica para a validação no
+  computador desktop; esta IDE não inicia a aplicação.
+• ia_memory.py é apenas uma camada de compatibilidade; a implementação ativa
+  usa arquivos no AppData e não cria nem consulta tabelas de memória no SQLite.
+• Para ``Producao``, o painel persiste Criação em ``Producao_Criacao`` e
+  Resultados em ``Producao_Resultados``. O diretório legado ``Producao`` não é
+  carregado nem alterado pelas conversas novas.
+• O botão “Consultar histórico legado de Produção” exibe até 100 mensagens
+  antigas em modo somente leitura. Elas não são atribuídas a uma subaba; quando
+  compartilhadas com a IA, recebem o rótulo “Produção (legado; aba não identificada)”.
+• “Apagar conversa” remove somente o JSONL da conversa e da aba ativas; preserva
+  o produto, outras abas e o histórico legado. As mensagens das demais abas
+  continuam disponíveis como memória compartilhada.
+• O resumo do projeto e das abas é mantido em um mapa funcional do código; a
+  sincronização automática com os documentos ainda não existe.
+• teste/simular_chat_ia.py exercita o roteamento real da janela, a troca de
+  contexto do painel e as mensagens entregues ao worker com armazenamento e
+  provedor falsos; não inicia PySide6 nem valida o comportamento de um provedor
+  real.
+• Tentativas individuais de fallback e análise visual multimodal continuam
+  fora da implementação atual.
+• O serviço agora diferencia eventos SSE de erro e respostas sem conteúdo; a
+  validação com OpenRouter e os demais provedores ainda depende do desktop.
